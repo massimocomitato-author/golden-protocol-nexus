@@ -56,7 +56,8 @@ Golden_Protocol_Nexus_Founder_Paper_v4.0_GENESIS.pdf 1.4 MB
 **Bitcoin Timestamp:**  
 Anchored via OpenTimestamps  
 Block: 946810  
-Date: 2026-04-27 (CET)---
+Date: 2026-04-27 (CET)
+---
 
 ## Concept
 
