@@ -207,6 +207,117 @@
       margin-top: 28px;
     }
 
+    .contact-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin-top: 30px;
+    }
+
+    .contact-card, .message-card, .domains-card, .progress-card {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 22px;
+      padding: 26px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.24);
+    }
+
+    .contact-card h3, .message-card h3, .domains-card h3, .progress-card h3 {
+      margin: 0 0 14px;
+      color: var(--gold-soft);
+      font-size: 24px;
+    }
+
+    .email-line, .domain-line {
+      display: block;
+      padding: 13px 0;
+      border-top: 1px solid rgba(245,211,75,0.14);
+      font-size: 18px;
+    }
+
+    .contact-form {
+      display: grid;
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .contact-form input, .contact-form textarea {
+      width: 100%;
+      border: 1px solid rgba(245,211,75,0.25);
+      border-radius: 14px;
+      background: rgba(0,0,0,0.35);
+      color: var(--text);
+      padding: 13px 14px;
+      font: inherit;
+    }
+
+    .contact-form textarea { min-height: 130px; resize: vertical; }
+
+    .contact-form button {
+      cursor: pointer;
+      border: 1px solid var(--line);
+      padding: 13px 20px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, rgba(245,211,75,0.25), rgba(245,211,75,0.05));
+      color: var(--gold-soft);
+      font-weight: 700;
+      font-family: inherit;
+      font-size: 16px;
+    }
+
+    .progress-grid {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      align-items: center;
+      gap: 30px;
+      margin-top: 28px;
+    }
+
+    .pie {
+      width: 230px;
+      height: 230px;
+      border-radius: 50%;
+      background: conic-gradient(var(--gold) 0 55%, rgba(245,211,75,0.16) 55% 100%);
+      position: relative;
+      box-shadow: 0 0 34px rgba(245,211,75,0.18);
+    }
+
+    .pie::after {
+      content: '';
+      position: absolute;
+      inset: 34px;
+      border-radius: 50%;
+      background: #050505;
+      border: 1px solid rgba(245,211,75,0.16);
+    }
+
+    .pie-label {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      z-index: 1;
+      color: var(--gold-soft);
+      font-size: 28px;
+      font-weight: 700;
+      text-align: center;
+      line-height: 1.1;
+    }
+
+    .legend { display: grid; gap: 12px; }
+    .legend-item { font-size: 19px; line-height: 1.45; }
+    .legend strong { color: var(--gold-soft); }
+    .dot {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 8px;
+      background: var(--gold);
+      box-shadow: 0 0 12px rgba(245,211,75,0.5);
+    }
+    .dot.soft { background: rgba(245,211,75,0.22); }
+
     .doc-link {
       display: flex;
       justify-content: space-between;
@@ -251,8 +362,9 @@
     }
 
     @media (max-width: 820px) {
-      .grid { grid-template-columns: 1fr; }
+      .grid, .contact-grid, .progress-grid { grid-template-columns: 1fr; }
       .doc-link { align-items: flex-start; flex-direction: column; }
+      .pie { margin: 0 auto; }
       header { min-height: auto; }
       .halo { width: 360px; height: 360px; }
     }
@@ -264,7 +376,7 @@
   <header>
     <div class="halo" aria-hidden="true"></div>
     <div class="wrap hero">
-      <!-- Replace symbol_3.png with the real symbol file uploaded to the repository root -->
+      <!-- Replace Symbol_3.png with the real symbol file uploaded to the repository root -->
       <img class="symbol" src="Symbol_3.png" alt="Golden Protocol Nexus symbol" onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';" />
       <div class="symbol-placeholder" style="display:none;">GPN</div>
 
@@ -274,7 +386,7 @@
 
       <div class="cta">
         <a class="btn primary" href="./Golden_Protocol_Nexus_Founder_Paper_v4.0_GENESIS.pdf" target="_blank" rel="noopener">Read Founder Paper</a>
-        <a class="btn" href="https://github.com/massimocomitato-author/golden-protocol-nexus/blob/main/" target="_blank" rel="noopener">GitHub Repository</a>
+        <a class="btn" href="https://github.com/massimocomitato-author/golden-protocol-nexus/edit/main/" target="_blank" rel="noopener">GitHub Repository</a>
         <a class="btn" href="#documents">Documents</a>
       </div>
     </div>
@@ -324,7 +436,7 @@
           <span>Open PDF →</span>
         </a>
 
-        <a class="doc-link" href="https://github.com/massimocomitato-author/golden-protocol-nexus/blob/main/" target="_blank" rel="noopener">
+        <a class="doc-link" href="https://github.com/massimocomitato-author/golden-protocol-nexus/edit/main/" target="_blank" rel="noopener">
           <div>
             <strong>GitHub Repository</strong><br />
             <span>Source files, public publication page, and version history.</span>
@@ -336,6 +448,63 @@
       <div class="hash">
         <strong>SHA256:</strong><br />
         45713e85f35da310017e5434b90d702bad2b2b22bc398e968888861c89fc46c32
+      </div>
+    </div>
+  </section>
+
+  <section id="contact">
+    <div class="wrap">
+      <h2>Contact</h2>
+      <p class="section-text">For official communications, please contact the author through the preferred address below.</p>
+
+      <div class="contact-grid">
+        <div class="contact-card">
+          <h3>Email addresses</h3>
+          <a class="email-line" href="mailto:info@goldenprotocolnexus.org?subject=Golden%20Protocol%20Nexus%20Inquiry">info@goldenprotocolnexus.org <span class="muted">— preferred</span></a>
+          <a class="email-line" href="mailto:massimocomitato@goldenprotocolnexus.org?subject=Golden%20Protocol%20Nexus%20Inquiry">massimocomitato@goldenprotocolnexus.org</a>
+        </div>
+
+        <div class="message-card">
+          <h3>Send a message</h3>
+          <p class="muted">This button opens your default email app and prepares a message to info@goldenprotocolnexus.org.</p>
+          <form class="contact-form" onsubmit="sendMail(event)">
+            <input id="senderName" type="text" placeholder="Your name" />
+            <input id="senderEmail" type="email" placeholder="Your email" />
+            <textarea id="senderMessage" placeholder="Your message"></textarea>
+            <button type="submit">Prepare Email Message</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="project-status">
+    <div class="wrap">
+      <h2>Project completion estimate</h2>
+      <p class="section-text">Current internal estimate of the project status.</p>
+
+      <div class="progress-grid">
+        <div class="pie" aria-label="Project completion chart">
+          <div class="pie-label">55%<br /><span style="font-size:14px;color:var(--muted);">overall</span></div>
+        </div>
+        <div class="progress-card">
+          <h3>Status breakdown</h3>
+          <div class="legend">
+            <div class="legend-item"><span class="dot"></span><strong>Design / architecture:</strong> 100% complete</div>
+            <div class="legend-item"><span class="dot soft"></span><strong>Implementation:</strong> 10% complete</div>
+            <div class="legend-item muted">Overall visual estimate: average of design completion and implementation progress.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="domains">
+    <div class="wrap">
+      <h2>Alternative domains</h2>
+      <div class="domains-card">
+        <a class="domain-line" href="https://goldenprotocolnexus.com" target="_blank" rel="noopener">goldenprotocolnexus.com</a>
+        <a class="domain-line" href="https://goldenprotocolnexus.it" target="_blank" rel="noopener">goldenprotocolnexus.it</a>
       </div>
     </div>
   </section>
@@ -459,6 +628,20 @@
       }
 
       requestAnimationFrame(draw);
+    }
+
+    function sendMail(event) {
+      event.preventDefault();
+      const name = document.getElementById('senderName').value.trim();
+      const email = document.getElementById('senderEmail').value.trim();
+      const message = document.getElementById('senderMessage').value.trim();
+      const subject = encodeURIComponent('Golden Protocol Nexus inquiry');
+      const body = encodeURIComponent(`Name: ${name}
+Email: ${email}
+
+Message:
+${message}`);
+      window.location.href = `mailto:info@goldenprotocolnexus.org?subject=${subject}&body=${body}`;
     }
 
     window.addEventListener('resize', resize);
