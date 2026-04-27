@@ -23,7 +23,109 @@
       background:
         radial-gradient(circle at 50% 12%, rgba(245, 211, 75, 0.18), transparent 34%),
         radial-gradient(circle at 15% 80%, rgba(245, 211, 75, 0.08), transparent 26%),
-        linear-gradient(180deg, rgba(0,0,0,0.06), rgba(0,0,0,0.86));
+        radial-gradient(circle at 80% 22%, rgba(70, 120, 180, 0.10), transparent 24%),
+        linear-gradient(180deg, rgba(0,0,0,0.02), rgba(0,0,0,0.82));
+    }
+
+    .universe-bg {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 18% 28%, rgba(255,255,255,0.75) 0 1px, transparent 2px),
+        radial-gradient(circle at 38% 18%, rgba(245,211,75,0.75) 0 1px, transparent 2px),
+        radial-gradient(circle at 62% 32%, rgba(255,255,255,0.68) 0 1px, transparent 2px),
+        radial-gradient(circle at 82% 18%, rgba(245,211,75,0.85) 0 1px, transparent 2px),
+        radial-gradient(circle at 72% 58%, rgba(255,255,255,0.55) 0 1px, transparent 2px),
+        radial-gradient(circle at 10% 72%, rgba(245,211,75,0.52) 0 1px, transparent 2px),
+        radial-gradient(circle at 48% 76%, rgba(255,255,255,0.58) 0 1px, transparent 2px),
+        radial-gradient(ellipse at 26% 30%, rgba(245,211,75,0.11), transparent 22%),
+        radial-gradient(ellipse at 70% 24%, rgba(80,120,180,0.11), transparent 24%);
+      background-size: 280px 280px, 360px 360px, 420px 420px, 500px 500px, 460px 460px, 380px 380px, 520px 520px, 100% 100%, 100% 100%;
+      animation: starDrift 95s linear infinite;
+      opacity: 0.9;
+    }
+
+    .universe-bg::before {
+      content: '';
+      position: absolute;
+      width: 190px;
+      height: 190px;
+      left: 7%;
+      top: 18%;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 34% 28%, rgba(255,230,128,0.50), transparent 10%),
+        radial-gradient(circle at 36% 32%, #2b2414 0%, #15110b 48%, #050505 72%);
+      border: 1px solid rgba(245,211,75,0.22);
+      box-shadow: 0 0 34px rgba(245,211,75,0.12);
+      opacity: 0.58;
+      transform: rotate(-18deg);
+    }
+
+    .universe-bg::after {
+      content: '';
+      position: absolute;
+      width: 320px;
+      height: 320px;
+      right: -80px;
+      top: 15%;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 30% 28%, rgba(255,230,128,0.38), transparent 9%),
+        radial-gradient(circle at 34% 36%, #2b281c 0%, #0f1319 52%, #020202 74%);
+      border-left: 1px solid rgba(245,211,75,0.28);
+      box-shadow: -18px 0 70px rgba(245,211,75,0.12);
+      opacity: 0.48;
+    }
+
+    .planet-ring {
+      position: fixed;
+      left: 14%;
+      top: 56%;
+      width: 92px;
+      height: 92px;
+      border-radius: 50%;
+      z-index: -1;
+      pointer-events: none;
+      background: radial-gradient(circle at 30% 28%, rgba(255,230,128,0.5), transparent 12%), radial-gradient(circle, #2a2113 0%, #0c0c0c 70%);
+      opacity: 0.42;
+      box-shadow: 0 0 24px rgba(245,211,75,0.08);
+    }
+
+    .planet-ring::after {
+      content: '';
+      position: absolute;
+      left: -28px;
+      top: 34px;
+      width: 150px;
+      height: 22px;
+      border: 1px solid rgba(245,211,75,0.30);
+      border-left-color: transparent;
+      border-right-color: transparent;
+      border-radius: 50%;
+      transform: rotate(-18deg);
+    }
+
+    .distant-planet {
+      position: fixed;
+      right: 20%;
+      top: 28%;
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      z-index: -1;
+      pointer-events: none;
+      background: radial-gradient(circle at 35% 30%, rgba(255,230,128,0.42), transparent 10%), radial-gradient(circle, #221b11, #030303 72%);
+      border: 1px solid rgba(245,211,75,0.16);
+      opacity: 0.45;
+    }
+
+    @keyframes starDrift {
+      from { background-position: 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, center, center; }
+      to { background-position: 280px 280px, -360px 360px, 420px -420px, -500px -500px, 460px 460px, -380px 380px, 520px -520px, center, center; }
     }
 
     :root {
@@ -373,10 +475,13 @@
 <body>
   <canvas id="network-bg"></canvas>
   <div class="page-glow" aria-hidden="true"></div>
+  <div class="universe-bg" aria-hidden="true"></div>
+  <div class="planet-ring" aria-hidden="true"></div>
+  <div class="distant-planet" aria-hidden="true"></div>
   <header>
     <div class="halo" aria-hidden="true"></div>
     <div class="wrap hero">
-      <!-- Replace Symbol_3.png with the real symbol file uploaded to the repository root -->
+      <!-- Symbol_3.png is uploaded to the repository root -->
       <img class="symbol" src="Symbol_3.png" alt="Golden Protocol Nexus symbol" onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';" />
       <div class="symbol-placeholder" style="display:none;">GPN</div>
 
@@ -386,7 +491,7 @@
 
       <div class="cta">
         <a class="btn primary" href="./Golden_Protocol_Nexus_Founder_Paper_v4.0_GENESIS.pdf" target="_blank" rel="noopener">Read Founder Paper</a>
-        <a class="btn" href="https://github.com/massimocomitato-author/golden-protocol-nexus/edit/main/" target="_blank" rel="noopener">GitHub Repository</a>
+        <a class="btn" href="https://github.com/massimocomitato-author/golden-protocol-nexus" target="_blank" rel="noopener">GitHub Repository</a>
         <a class="btn" href="#documents">Documents</a>
       </div>
     </div>
@@ -430,8 +535,16 @@
 
         <a class="doc-link" href="./Golden_Protocol_Nexus_Conciser_Paper.pdf" target="_blank" rel="noopener">
           <div>
-            <strong>Lightpaper</strong><br />
-            <span>Short public overview. Replace or remove if not yet published.</span>
+            <strong>Conciser Paper</strong><br />
+            <span>Concise public version of the protocol paper.</span>
+          </div>
+          <span>Open PDF →</span>
+        </a>
+
+        <a class="doc-link" href="./Golden_Protocol_Nexus_Ultra_Summary.pdf" target="_blank" rel="noopener">
+          <div>
+            <strong>Ultra Summary</strong><br />
+            <span>Ultra-short summary for fast reading and sharing.</span>
           </div>
           <span>Open PDF →</span>
         </a>
@@ -462,6 +575,7 @@
           <h3>Email addresses</h3>
           <a class="email-line" href="mailto:info@goldenprotocolnexus.org?subject=Golden%20Protocol%20Nexus%20Inquiry">info@goldenprotocolnexus.org <span class="muted">— preferred</span></a>
           <a class="email-line" href="mailto:massimocomitato@goldenprotocolnexus.org?subject=Golden%20Protocol%20Nexus%20Inquiry">massimocomitato@goldenprotocolnexus.org</a>
+          <a class="email-line" href="https://t.me/Golden_Protocol_Nexus" target="_blank" rel="noopener">Telegram: Golden_Protocol_Nexus</a>
         </div>
 
         <div class="message-card">
