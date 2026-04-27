@@ -63,6 +63,7 @@
       box-shadow: 0 0 34px rgba(245,211,75,0.12);
       opacity: 0.58;
       transform: rotate(-18deg);
+      animation: planetFloatLeft 80s ease-in-out infinite alternate;
     }
 
     .universe-bg::after {
@@ -79,6 +80,7 @@
       border-left: 1px solid rgba(245,211,75,0.28);
       box-shadow: -18px 0 70px rgba(245,211,75,0.12);
       opacity: 0.48;
+      animation: planetFloatRight 105s ease-in-out infinite alternate;
     }
 
     .planet-ring {
@@ -376,10 +378,11 @@
     }
 
     .pie {
+      --progress: 50%;
       width: 230px;
       height: 230px;
       border-radius: 50%;
-      background: conic-gradient(var(--gold) 0 55%, rgba(245,211,75,0.16) 55% 100%);
+      background: conic-gradient(var(--gold) 0 var(--progress), rgba(245,211,75,0.16) var(--progress) 100%);
       position: relative;
       box-shadow: 0 0 34px rgba(245,211,75,0.18);
     }
@@ -599,14 +602,14 @@
 
       <div class="progress-grid">
         <div class="pie" aria-label="Project completion chart">
-          <div class="pie-label">55%<br /><span style="font-size:14px;color:var(--muted);">overall</span></div>
+          <div class="pie-label">50%<br /><span style="font-size:14px;color:var(--muted);">overall</span></div>
         </div>
         <div class="progress-card">
           <h3>Status breakdown</h3>
           <div class="legend">
             <div class="legend-item"><span class="dot"></span><strong>Design / architecture:</strong> 100% complete</div>
-            <div class="legend-item"><span class="dot soft"></span><strong>Implementation:</strong> 10% complete</div>
-            <div class="legend-item muted">Overall visual estimate: average of design completion and implementation progress.</div>
+            <div class="legend-item"><span class="dot soft"></span><strong>Implementation:</strong> 1% complete</div>
+            <div class="legend-item muted">Overall visual estimate: rounded midpoint between completed architecture and early implementation progress.</div>
           </div>
         </div>
       </div>
