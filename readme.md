@@ -41,7 +41,7 @@ Golden Protocol Nexus replaces this model:
 ## Documents
 
 - 📄 [Founder Paper](https://github.com/massimocomitato-author/golden-protocol-nexus/blob/main/Golden_Protocol_Nexus_Founder_Paper_v4.0_GENESIS.pdf)
-- 📄 [Concise Paper](https://github.com/massimocomitato-author/golden-protocol-nexus/blob/main/Golden_Protocolo_Nexus_Conciser_Paper.pdf)
+- 📄 [Concise Paper](https://github.com/massimocomitato-author/golden-protocol-nexus/blob/main/Golden_Protocol_Nexus_Conciser_Paper.pdf)
 - 📄 [Ultra Summary](https://github.com/massimocomitato-author/golden-protocol-nexus/blob/main/Golden_Protocol_Nexus_Ultra_Summary.pdf)
 
 ---
