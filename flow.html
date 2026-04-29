@@ -1,1 +1,362 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Golden Protocol Nexus — Protocol Flow</title>
+
+  <style>
+    :root {
+      --bg: #050505;
+      --gold: #f5d34b;
+      --gold-soft: #ffe680;
+      --text: #f8f1c4;
+      --muted: #b9aa65;
+      --line: rgba(245, 211, 75, 0.28);
+      --panel: rgba(245, 211, 75, 0.075);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at top, rgba(245,211,75,0.13), transparent 35%),
+        linear-gradient(180deg, #020202, #050505 55%, #000);
+      color: var(--text);
+      font-family: Georgia, "Times New Roman", serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .wrap {
+      width: min(900px, calc(100% - 34px));
+      margin: 0 auto;
+      padding: 56px 0 80px;
+      text-align: center;
+    }
+
+    h1 {
+      color: var(--gold);
+      font-size: clamp(38px, 6vw, 72px);
+      margin: 0 0 18px;
+      letter-spacing: -0.04em;
+      text-shadow: 0 0 28px rgba(245,211,75,0.25);
+    }
+
+    .subtitle {
+      max-width: 680px;
+      margin: 0 auto 42px;
+      color: var(--gold-soft);
+      font-size: 20px;
+      line-height: 1.55;
+      font-style: italic;
+    }
+
+    .flow {
+      position: relative;
+      max-width: 660px;
+      margin: 0 auto;
+    }
+
+    .step {
+      position: relative;
+      border: 1px solid var(--line);
+      background: linear-gradient(135deg, rgba(245,211,75,0.12), rgba(245,211,75,0.035));
+      border-radius: 22px;
+      padding: 24px 26px;
+      margin: 0 auto 28px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.34), 0 0 24px rgba(245,211,75,0.07);
+      opacity: 0;
+      transform: translateY(34px);
+      animation: appear 0.8s ease forwards;
+    }
+
+    .step:nth-of-type(1) { animation-delay: 0.1s; }
+    .step:nth-of-type(2) { animation-delay: 0.35s; }
+    .step:nth-of-type(3) { animation-delay: 0.6s; }
+    .step:nth-of-type(4) { animation-delay: 0.85s; }
+    .step:nth-of-type(5) { animation-delay: 1.1s; }
+    .step:nth-of-type(6) { animation-delay: 1.35s; }
+    .step:nth-of-type(7) { animation-delay: 1.6s; }
+    .step:nth-of-type(8) { animation-delay: 1.85s; }
+    .step:nth-of-type(9) { animation-delay: 2.1s; }
+    .step:nth-of-type(10) { animation-delay: 2.35s; }
+
+    @keyframes appear {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .step h2 {
+      margin: 0 0 10px;
+      color: var(--gold-soft);
+      font-size: 24px;
+    }
+
+    .step p {
+      margin: 0;
+      font-size: 17px;
+      line-height: 1.6;
+      color: var(--text);
+    }
+
+    .arrow {
+      color: var(--gold);
+      font-size: 34px;
+      margin: -12px 0 14px;
+      opacity: 0;
+      animation: fadeArrow 0.6s ease forwards;
+    }
+
+    .arrow:nth-of-type(1) { animation-delay: 0.28s; }
+    .arrow:nth-of-type(2) { animation-delay: 0.53s; }
+    .arrow:nth-of-type(3) { animation-delay: 0.78s; }
+    .arrow:nth-of-type(4) { animation-delay: 1.03s; }
+    .arrow:nth-of-type(5) { animation-delay: 1.28s; }
+    .arrow:nth-of-type(6) { animation-delay: 1.53s; }
+    .arrow:nth-of-type(7) { animation-delay: 1.78s; }
+    .arrow:nth-of-type(8) { animation-delay: 2.03s; }
+    .arrow:nth-of-type(9) { animation-delay: 2.28s; }
+
+    @keyframes fadeArrow {
+      to { opacity: 0.85; }
+    }
+
+    .shards {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .shard {
+      border: 1px solid rgba(245,211,75,0.28);
+      border-radius: 999px;
+      padding: 8px 13px;
+      color: var(--gold-soft);
+      background: rgba(0,0,0,0.28);
+      font-size: 14px;
+      animation: pulse 3.2s ease-in-out infinite;
+    }
+
+    .shard:nth-child(2) { animation-delay: 0.4s; }
+    .shard:nth-child(3) { animation-delay: 0.8s; }
+    .shard:nth-child(4) { animation-delay: 1.2s; }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 rgba(245,211,75,0); }
+      50% { box-shadow: 0 0 18px rgba(245,211,75,0.22); }
+    }
+
+    .role-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .role {
+      border: 1px solid rgba(245,211,75,0.20);
+      border-radius: 16px;
+      padding: 14px;
+      background: rgba(0,0,0,0.25);
+    }
+
+    .role strong {
+      display: block;
+      color: var(--gold-soft);
+      margin-bottom: 6px;
+    }
+
+    .role span {
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .note {
+      margin-top: 44px;
+      border: 1px solid rgba(245,211,75,0.18);
+      background: rgba(255,255,255,0.025);
+      border-radius: 22px;
+      padding: 24px;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.65;
+    }
+
+    .back {
+      display: inline-block;
+      margin-top: 34px;
+      border: 1px solid var(--line);
+      padding: 13px 20px;
+      border-radius: 999px;
+      color: var(--gold-soft);
+      background: rgba(245,211,75,0.08);
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    .back:hover { text-decoration: underline; }
+
+    @media (max-width: 700px) {
+      .role-grid { grid-template-columns: 1fr; }
+      .step { padding: 21px 20px; }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="wrap">
+    <h1>Protocol Flow</h1>
+
+    <div class="subtitle">
+      Blind Sharded Issuance: ownership is generated only when custody, audit,
+      validation, and settlement conditions are completed correctly.
+    </div>
+
+    <div class="flow">
+
+      <div class="step">
+        <h2>1. Buyer Order</h2>
+        <p>
+          The buyer places an order, for example <strong>1 kg of gold</strong>.
+          Buyer funds are locked in escrow and cannot be released until validation is complete.
+        </p>
+      </div>
+
+      <div class="arrow">↓</div>
+
+      <div class="step">
+        <h2>2. Order Fragmentation</h2>
+        <p>
+          The protocol fragments the order into independent execution shards.
+          Each shard represents only a partial quantity of the total order.
+        </p>
+
+        <div class="shards">
+          <div class="shard">Shard #1 — 50g</div>
+          <div class="shard">Shard #2 — 30g</div>
+          <div class="shard">Shard #3 — 120g</div>
+          <div class="shard">Shard #n — ...</div>
+        </div>
+      </div>
+
+      <div class="arrow">↓</div>
+
+      <div class="step">
+        <h2>3. Demand / Supply Matching</h2>
+        <p>
+          Each purchase shard is deterministically matched with corresponding supply-side shards.
+          Every acquisition corresponds to a verified sale or delivery obligation.
+        </p>
+      </div>
+
+      <div class="arrow">↓</div>
+
+      <div class="step">
+        <h2>4. Probabilistic Role Distribution</h2>
+        <p>
+          For each shard, the protocol assigns execution responsibilities across different actors.
+          No single participant receives full visibility over the complete order.
+        </p>
+
+        <div class="role-grid">
+          <div class="role">
+            <strong>Issuer Function</strong>
+            <span>Executes assigned acquisition logic and commits capital exposure.</span>
+          </div>
+          <div class="role">
+            <strong>Vault</strong>
+            <span>Receives and records the physical asset for its assigned shard.</span>
+          </div>
+          <div class="role">
+            <strong>Auditor Set</strong>
+            <span>Validates shard-specific custody and real-world event consistency.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="arrow">↓</div>
+
+      <div class="step">
+        <h2>5. Physical Transfer</h2>
+        <p>
+          The physical asset is moved through the logistics layer.
+          Transport delivers the allocated gold portions to qualified vaults
+          such as Vault 1, Vault 2, and additional vault institutions.
+        </p>
+      </div>
+
+      <div class="arrow">↓</div>
+
+      <div class="step">
+        <h2>6. Auditor Intervention</h2>
+        <p>
+          Auditors verify that the relevant real-world events occurred correctly:
+          delivery, custody evidence, quantity, purity, and consistency with the shard record.
+        </p>
+      </div>
+
+      <div class="arrow">↓</div>
+
+      <div class="step">
+        <h2>7. Validator Intervention</h2>
+        <p>
+          Validators verify cryptographic and protocol-level conditions:
+          signatures, registered keys, shard identifiers, non-reuse of custody records,
+          and consistency with the protocol state.
+        </p>
+      </div>
+
+      <div class="arrow">↓</div>
+
+      <div class="step">
+        <h2>8. Protocol Reconstruction</h2>
+        <p>
+          Validated shards are reconstructed at protocol level.
+          The full allocation is not controlled by any single participant,
+          but emerges from verified shard completion.
+        </p>
+      </div>
+
+      <div class="arrow">↓</div>
+
+      <div class="step">
+        <h2>9. Issuance as Protocol Outcome</h2>
+        <p>
+          If all required shard conditions are valid, ownership units are generated.
+          Issuance is not a discretionary act by an entity:
+          it is the final protocol consequence of successful verification.
+        </p>
+      </div>
+
+      <div class="arrow">↓</div>
+
+      <div class="step">
+        <h2>10. Escrow Release</h2>
+        <p>
+          Once minting is finalized, escrowed funds are released to the corresponding sellers
+          or shard-side liquidity providers according to protocol rules.
+        </p>
+      </div>
+
+    </div>
+
+    <div class="note">
+      <strong>Clarification:</strong>
+      in this model, the “issuer” is best understood as a protocol-bounded issuance function
+      or execution role, not as an unconstrained central authority. Digital ownership emerges
+      only after shard execution, real-world validation, cryptographic verification, and protocol
+      reconstruction are completed.
+    </div>
+
+    <a class="back" href="./index.html">← Back to main site</a>
+  </main>
+</body>
+</html>
