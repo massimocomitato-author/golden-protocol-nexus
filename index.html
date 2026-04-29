@@ -331,13 +331,22 @@
       color: var(--text);
     }
 
-    .cta {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 14px;
-      justify-content: center;
-      margin-top: 36px;
-    }
+
+
+.cta {
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  gap: 14px;
+  justify-content: center;
+  margin-top: 36px;
+}
+
+@media (max-width: 700px) {
+  .cta {
+    grid-template-columns: 1fr;
+  }
+}
+
 
     .btn {
       border: 1px solid var(--line);
