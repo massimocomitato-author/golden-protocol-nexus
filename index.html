@@ -713,6 +713,69 @@ verification is not a subsequent process — it is a prerequisite for issuance.
 <br> <br>
 
 
+<section id="protocol-invariants">
+  <div class="wrap" style="text-align:center;">
+
+    <h2>Protocol Invariants</h2>
+
+    <p class="section-text">
+      Fundamental constraints enforced by the protocol.
+    </p>
+
+    <div style="
+      display: grid;
+      gap: 24px;
+      max-width: 520px;
+      margin: 40px auto;
+    ">
+
+      <!-- INVARIANT 1 -->
+      <div style="
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 24px;
+        background: linear-gradient(135deg, rgba(245,211,75,0.12), rgba(245,211,75,0.03));
+        box-shadow: 0 0 24px rgba(245,211,75,0.12);
+      ">
+        <div style="font-size: 22px; color: var(--gold-soft); margin-bottom: 10px;">
+          Supply Constraint
+        </div>
+
+        <div style="font-size: 26px; color: var(--gold); font-weight: bold;">
+          Supply ≤ VRS
+        </div>
+
+        <div style="margin-top: 10px; color: var(--muted); font-size: 15px;">
+          Circulating supply cannot exceed verified reserves.
+        </div>
+      </div>
+
+      <!-- INVARIANT 2 -->
+      <div style="
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 24px;
+        background: linear-gradient(135deg, rgba(245,211,75,0.12), rgba(245,211,75,0.03));
+        box-shadow: 0 0 24px rgba(245,211,75,0.12);
+      ">
+        <div style="font-size: 22px; color: var(--gold-soft); margin-bottom: 10px;">
+          Order Composition
+        </div>
+
+        <div style="font-size: 26px; color: var(--gold); font-weight: bold;">
+          Order = Σ(shards)
+        </div>
+
+        <div style="margin-top: 10px; color: var(--muted); font-size: 15px;">
+          Every order is reconstructed from validated shard execution.
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</section>
+
 
   
 
