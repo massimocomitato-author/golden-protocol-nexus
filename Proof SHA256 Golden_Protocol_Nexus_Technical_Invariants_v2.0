@@ -1,7 +1,7 @@
 Golden Protocol Nexus — Proof of Existence
 
 Document:
-Golden_Protocol_Nexus_Founder_Paper_v4.0_GENESIS.pdf
+Golden_Protocol_Nexus_Technical_Invariants_v2.0.pdf
 
 SHA256:
 45713e85f35da310017e5434b90d702bad2b2b22bc398e968888861c89fc46c32
@@ -10,10 +10,10 @@ Bitcoin Timestamp:
 Anchored via OpenTimestamps
 
 Block Height:
-946810
+947150
 
 Timestamp Date (approx):
-2026-04-27
+2026-04-29
 
 Verification:
 This hash can be independently verified against the Bitcoin blockchain
