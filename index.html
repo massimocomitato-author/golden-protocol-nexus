@@ -745,126 +745,13 @@ verification is not a subsequent process — it is a prerequisite for issuance.
 <br> <br>
 
 
-<section id="protocol-invariants">
-  <div class="wrap" style="text-align:center;">
 
-    <h2>Protocol Invariants</h2>
 
-    <p class="section-text">
-      Fundamental constraints enforced by the protocol.
-    </p>
 
-    <div style="
-      display: grid;
-      gap: 24px;
-      max-width: 520px;
-      margin: 40px auto;
-    ">
 
-<!-- INVARIANT 1 -->
+
       
-<div style="
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  padding: 24px;
-  background: linear-gradient(135deg, rgba(245,211,75,0.12), rgba(245,211,75,0.03));
-  box-shadow: 0 0 24px rgba(245,211,75,0.12);
-">
-
-  <div style="font-size: 22px; color: var(--gold-soft); margin-bottom: 10px;">
-    Supply Constraint
-  </div>
-
-  <div style="font-size: 26px; color: var(--gold); font-weight: bold;">
-    S(t) ≤ VRS(t)
-  </div>
-
-  <div style="margin-top: 10px; color: var(--muted); font-size: 15px;">
-    At any time t, circulating supply cannot exceed verified reserves.
-  </div>
-
-</div>
-
-      <div style="margin-top: 12px; color: var(--gold-soft); font-size: 16px;">
-  ⇒ Inflation(t) = 0
-</div>
-
-<div style="margin-top: 6px; color: var(--muted); font-size: 14px;">
-  Since supply is strictly bounded by verified reserves, uncontrolled inflation is structurally prevented.
-</div>
-
-      <p style="margin-top: 14px; font-style: italic; color: var(--gold-soft);">
-  Supply expansion is not discretionary. It is constrained by verified reality.
-</p>
-      
-      
-      <!-- INVARIANT 2 -->
-      
-      <div style="
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  padding: 24px;
-  background: linear-gradient(135deg, rgba(245,211,75,0.12), rgba(245,211,75,0.03));
-  box-shadow: 0 0 24px rgba(245,211,75,0.12);
-">
-
-  <div style="font-size: 22px; color: var(--gold-soft); margin-bottom: 10px;">
-    Order Reconstruction
-  </div>
-
-  <div style="font-size: 26px; color: var(--gold); font-weight: bold;">
-    R = ∑<sub>i=1</sub><sup>n</sup> s<sub>i</sub>
-  </div>
-
-  <div style="margin-top: 10px; color: var(--muted); font-size: 15px;">
-    The total order R is reconstructed as the sum of all validated shards.
-  </div>
-
-</div>
-       
-      <!-- INVARIANT 3 -->
-      
-      
-<div style="
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  padding: 24px;
-  background: linear-gradient(135deg, rgba(245,211,75,0.12), rgba(245,211,75,0.03));
-  box-shadow: 0 0 24px rgba(245,211,75,0.12);
-">
-
-  <div style="font-size: 22px; color: var(--gold-soft); margin-bottom: 10px;">
-    Issuance Condition
-  </div>
-
-  <div style="font-size: 26px; color: var(--gold); font-weight: bold;">
-    I(s<sub>i</sub>) = 1 ⇔ Valid(s<sub>i</sub>)
-  </div>
-
-  <div style="margin-top: 10px; color: var(--muted); font-size: 15px;">
-    Issuance is triggered only when the corresponding shard satisfies all protocol validation conditions.
-  </div>
-
-</div>
-    </div>
-
-  </div>
-</section>
-
-
-
-
-
-
-
-
-
-
-
-
-  
-  
-  
+    
 
   <section id="documents">
     <div class="wrap">
