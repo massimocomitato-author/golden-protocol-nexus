@@ -208,6 +208,47 @@
       .role-grid { grid-template-columns: 1fr; }
       .step { padding: 21px 20px; }
     }
+
+
+.flow-note {
+  margin: 30px auto 40px;
+  padding: 22px 24px;
+  max-width: 600px;
+  border-radius: 18px;
+
+  background: linear-gradient(
+    135deg,
+    rgba(245,211,75,0.12),
+    rgba(245,211,75,0.03)
+  );
+
+  border: 1px solid rgba(245,211,75,0.25);
+
+  box-shadow:
+    0 0 25px rgba(245,211,75,0.12),
+    inset 0 0 25px rgba(245,211,75,0.05);
+
+  text-align: center;
+}
+
+.flow-note strong {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--gold-soft);
+  font-size: 18px;
+  letter-spacing: 0.03em;
+}
+
+.flow-note span {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+
+
+
+
   </style>
 </head>
 
@@ -286,6 +327,28 @@
 
       <div class="step">
         <h2>5. Physical Transfer</h2>
+
+
+
+<div class="flow-note">
+  <strong>Bootstrap vs Operational Phase</strong>
+  <span>
+    Physical transfer is required during the initial bootstrap phase,
+    when reserves are first introduced into the system.<br><br>
+
+    Once verified reserves exist within vaults,
+    ownership becomes fluid: transactions occur without moving
+    the underlying asset.
+  </span>
+</div>
+
+
+
+
+
+
+
+
         <p>
           The physical asset is moved through the logistics layer.
           Transport delivers the allocated gold portions to qualified vaults
