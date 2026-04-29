@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Golden Protocol Nexus — Upgrades</title>
+
+  <style>
+    :root {
+      --gold: #f5d34b;
+      --gold-soft: #ffe680;
+      --text: #f8f1c4;
+      --muted: #b9aa65;
+      --line: rgba(245, 211, 75, 0.28);
+      --panel: rgba(245, 211, 75, 0.075);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at top, rgba(245,211,75,0.13), transparent 35%),
+        linear-gradient(180deg, #020202, #050505 55%, #000);
+      color: var(--text);
+      font-family: Georgia, "Times New Roman", serif;
+      min-height: 100vh;
+    }
+
+    .wrap {
+      width: min(900px, calc(100% - 34px));
+      margin: 0 auto;
+      padding: 56px 0 80px;
+      text-align: center;
+    }
+
+    h1 {
+      color: var(--gold);
+      font-size: clamp(38px, 6vw, 72px);
+      margin: 0 0 18px;
+      letter-spacing: -0.04em;
+      text-shadow: 0 0 28px rgba(245,211,75,0.25);
+    }
+
+    .subtitle {
+      max-width: 700px;
+      margin: 0 auto 42px;
+      color: var(--gold-soft);
+      font-size: 20px;
+      line-height: 1.55;
+      font-style: italic;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      background: linear-gradient(135deg, rgba(245,211,75,0.12), rgba(245,211,75,0.035));
+      border-radius: 22px;
+      padding: 26px;
+      margin: 24px auto;
+      max-width: 680px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.34), 0 0 24px rgba(245,211,75,0.07);
+    }
+
+    .card h2 {
+      color: var(--gold-soft);
+      font-size: 28px;
+      margin: 0 0 14px;
+    }
+
+    .card p {
+      font-size: 17px;
+      line-height: 1.65;
+      margin: 14px 0;
+    }
+
+    .formula {
+      margin: 26px auto;
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(255,255,255,0.03);
+      color: var(--gold);
+      font-size: 22px;
+      font-weight: bold;
+      line-height: 1.5;
+    }
+
+    .note {
+      color: var(--gold-soft);
+      font-style: italic;
+    }
+
+    .back {
+      display: inline-block;
+      margin-top: 34px;
+      border: 1px solid var(--line);
+      padding: 13px 20px;
+      border-radius: 999px;
+      color: var(--gold-soft);
+      background: rgba(245,211,75,0.08);
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    .back:hover { text-decoration: underline; }
+  </style>
+</head>
+
+<body>
+  <main class="wrap">
+    <h1>Future Upgrades</h1>
+
+    <div class="subtitle">
+      Additional modules may extend Golden Protocol Nexus,
+      but no extension can violate the protocol invariants.
+    </div>
+
+    <div class="card">
+      <h2>Invariant-Bounded Extensibility</h2>
+
+      <p>
+        Golden Protocol Nexus is designed as an extensible architecture.
+        Future modules may introduce additional functions, including credit mechanisms,
+        governance tools, interoperability layers, and market applications.
+      </p>
+
+      <p>
+        However, the protocol admits no exceptions to its fundamental invariants.
+        Any future upgrade or additional module must remain subordinate to the same
+        core constraints.
+      </p>
+
+      <div class="formula">
+        S(t) ≤ VRS(t)<br>
+        R = ∑<sub>i=1</sub><sup>n</sup> s<sub>i</sub><br>
+        I(s<sub>i</sub>) = 1 ⇔ Valid(s<sub>i</sub>)
+      </div>
+
+      <p class="note">
+        Invariants are not guidelines. They are enforced constraints.
+      </p>
+
+      <p>
+        If an extension violates these constraints, it is not part of Nexus.
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>Credit Layer</h2>
+
+      <p>
+        A future Nexus credit layer may represent debt not as the creation of new money,
+        but as a time-bound reassignment of ownership over already verified reserves.
+      </p>
+
+      <p>
+        In this model, credit operates only on existing VRS-backed ownership states
+        and cannot expand circulating supply beyond verified reserves.
+      </p>
+
+      <div class="formula">
+        credit ≠ new supply<br>
+        credit = temporary ownership state transition
+      </div>
+
+      <p>
+        Debt becomes a constrained transformation of ownership state,
+        not a source of inflation.
+      </p>
+
+      <p class="note">
+        Credit redistributes verified ownership over time.
+        It does not create unverified value.
+      </p>
+    </div>
+
+    <a class="back" href="./index.html">← Back to main site</a>
+  </main>
+</body>
+</html>
