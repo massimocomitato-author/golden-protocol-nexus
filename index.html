@@ -729,26 +729,30 @@ verification is not a subsequent process — it is a prerequisite for issuance.
       margin: 40px auto;
     ">
 
-      <!-- INVARIANT 1 -->
-      <div style="
-        border: 1px solid var(--line);
-        border-radius: 18px;
-        padding: 24px;
-        background: linear-gradient(135deg, rgba(245,211,75,0.12), rgba(245,211,75,0.03));
-        box-shadow: 0 0 24px rgba(245,211,75,0.12);
-      ">
-        <div style="font-size: 22px; color: var(--gold-soft); margin-bottom: 10px;">
-          Supply Constraint
-        </div>
+<!-- INVARIANT 1 -->
+      
+<div style="
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 24px;
+  background: linear-gradient(135deg, rgba(245,211,75,0.12), rgba(245,211,75,0.03));
+  box-shadow: 0 0 24px rgba(245,211,75,0.12);
+">
 
-        <div style="font-size: 26px; color: var(--gold); font-weight: bold;">
-          Supply ≤ VRS
-        </div>
+  <div style="font-size: 22px; color: var(--gold-soft); margin-bottom: 10px;">
+    Supply Constraint
+  </div>
 
-        <div style="margin-top: 10px; color: var(--muted); font-size: 15px;">
-          Circulating supply cannot exceed verified reserves.
-        </div>
-      </div>
+  <div style="font-size: 26px; color: var(--gold); font-weight: bold;">
+    S(t) ≤ VRS(t)
+  </div>
+
+  <div style="margin-top: 10px; color: var(--muted); font-size: 15px;">
+    At any time t, circulating supply cannot exceed verified reserves.
+  </div>
+
+</div>
+
 
       
       
@@ -776,9 +780,34 @@ verification is not a subsequent process — it is a prerequisite for issuance.
 
 </div>
        
+      <!-- INVARIANT 3 -->
       
       
-         
+<div style="
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 24px;
+  background: linear-gradient(135deg, rgba(245,211,75,0.12), rgba(245,211,75,0.03));
+  box-shadow: 0 0 24px rgba(245,211,75,0.12);
+">
+
+  <div style="font-size: 22px; color: var(--gold-soft); margin-bottom: 10px;">
+    Issuance Condition
+  </div>
+
+  <div style="font-size: 26px; color: var(--gold); font-weight: bold;">
+    I(s<sub>i</sub>) = 1 ⇔ Valid(s<sub>i</sub>)
+  </div>
+
+  <div style="margin-top: 10px; color: var(--muted); font-size: 15px;">
+    Issuance is triggered only when the corresponding shard satisfies all protocol validation conditions.
+  </div>
+
+</div>
+
+
+
+      
       
       
 
