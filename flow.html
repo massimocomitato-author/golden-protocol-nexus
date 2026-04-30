@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Protocol Flow — Golden Protocol Nexus</title>
+
+<style>
+:root {
+  --gold:#f5d34b;
+  --soft:#ffe680;
+  --text:#f8f1c4;
+  --muted:#b9aa65;
+  --line:rgba(245,211,75,0.25);
+}
+
+body{
+  margin:0;
+  background:linear-gradient(180deg,#020202,#050505,#000);
+  color:var(--text);
+  font-family:Georgia,serif;
+}
+
+.wrap{
+  max-width:1200px;
+  margin:auto;
+  padding:50px 20px;
+  text-align:center;
+}
+
+h1{
+  color:var(--gold);
+  font-size:56px;
+  margin-bottom:10px;
+}
+
+.subtitle{
+  color:var(--soft);
+  max-width:800px;
+  margin:0 auto 40px;
+  font-style:italic;
+}
+
+.box{
+  border:1px solid var(--line);
+  border-radius:20px;
+  padding:22px;
+  margin:25px auto;
+  max-width:750px;
+  background:rgba(255,255,255,0.03);
+  animation:fade 1.2s ease forwards;
+  opacity:0;
+}
+
+@keyframes fade{
+  to{opacity:1;transform:none}
+}
+
+.arrow{
+  font-size:28px;
+  color:var(--gold);
+}
+
+.columns{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:30px;
+  margin-top:30px;
+}
+
+.col{
+  border:1px solid var(--line);
+  border-radius:20px;
+  padding:20px;
+  background:rgba(255,255,255,0.02);
+}
+
+.step{
+  margin:15px 0;
+  padding:15px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:rgba(245,211,75,0.05);
+}
+
+.merge{
+  margin-top:50px;
+  padding:25px;
+  border:1px solid var(--line);
+  border-radius:20px;
+  max-width:700px;
+  margin-left:auto;
+  margin-right:auto;
+}
+
+.formula{
+  font-size:26px;
+  color:var(--gold);
+  margin:15px 0;
+}
+
+.note{
+  margin-top:30px;
+  color:var(--muted);
+}
+
+@media(max-width:900px){
+  .columns{grid-template-columns:1fr;}
+}
+</style>
+</head>
+
+<body>
+<div class="wrap">
+
+<h1>Protocol Flow</h1>
+
+<div class="subtitle">
+One order → distributed into shards → autonomously allocated → converging to one deterministic condition
+</div>
+
+<!-- ORDER -->
+<div class="box">
+<b>Order Initialization</b><br><br>
+Buyer submits an order.<br>
+Funds are locked in escrow.
+</div>
+
+<div class="arrow">↓</div>
+
+<!-- SHARDING -->
+<div class="box">
+<b>Order Sharding</b><br><br>
+The order is decomposed into multiple shards.<br>
+Number and volume are randomly generated.
+<br><br>
+<i>Sharding occurs before any execution path selection.</i>
+</div>
+
+<div class="arrow">↓</div>
+
+<!-- ALLOCATION -->
+<div class="box">
+<b>Protocol Allocation Engine</b><br><br>
+
+Each shard is independently routed by the protocol.<br>
+No actor decides allocation.<br><br>
+
+Shards are distributed across:
+<br><br>
+
+<span style="color:var(--soft)">
+• Bootstrap Channel → VRS expansion<br>
+• Internal Channel → VRS-native exchange
+</span>
+
+<br><br>
+
+Allocation criteria:
+<br>
+<span style="color:var(--muted)">
+• vault reinforcement<br>
+• integration of new vaults<br>
+• optimization of reserve distribution
+</span>
+
+<br><br>
+
+<i>Execution is shard-based, not order-based.</i>
+</div>
+
+<div class="arrow">↓</div>
+
+<!-- SPLIT -->
+<div class="columns">
+
+<!-- BOOTSTRAP -->
+<div class="col">
+<h2 style="color:var(--gold)">Bootstrap Path</h2>
+<i>VRS Layer Construction</i>
+
+<div class="step">
+External Issuer = Physical Seller
+</div>
+
+<div class="step">
+Case 1: issuer buys gold → capital exposure
+</div>
+
+<div class="step">
+Case 2: issuer already owns gold → onboarding
+</div>
+
+<div class="step">
+Transport assigned by protocol
+</div>
+
+<div class="step">
+Vault custody + Auditor verification
+</div>
+
+<div class="step">
+Validator checks certificates
+</div>
+
+<div class="step">
+VRS expands
+</div>
+
+</div>
+
+<!-- INTERNAL -->
+<div class="col">
+<h2 style="color:var(--gold)">Internal Path</h2>
+<i>VRS-Native Exchange</i>
+
+<div class="step">
+Internal Issuer = Protocol Function
+</div>
+
+<div class="step">
+Seller already owns VRS-backed assets
+</div>
+
+<div class="step">
+Order Sharding (common step)
+</div>
+
+<div class="step">
+Shard Matching (non-linear)
+</div>
+
+<div class="step">
+Case 3: buyer becomes future seller
+</div>
+
+<div class="step">
+Audit + validation checks
+</div>
+
+<div class="step">
+Ownership reallocation (no physical move)
+</div>
+
+</div>
+
+</div>
+
+<!-- MERGE -->
+<div class="merge">
+<b>Common Final Condition</b>
+
+<div class="formula">
+I(sᵢ) = 1 ⇔ Valid(sᵢ)
+</div>
+
+Issuance depends only on validity.<br>
+Not on execution path.
+</div>
+
+<!-- NOTE -->
+<div class="note">
+The protocol emits the final token.<br>
+The issuer does not emit currency.<br><br>
+
+External issuer = asset provider<br>
+Internal issuer = execution function
+</div>
+
+</div>
+</body>
+</html>
