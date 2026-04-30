@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Protocol Flow — Golden Protocol Nexus</title>
+
+<style>
+:root {
+  --gold:#f5d34b;
+  --soft:#ffe680;
+  --text:#f8f1c4;
+  --muted:#b9aa65;
+  --line:rgba(245,211,75,0.25);
+}
+
+body{
+  margin:0;
+  background:linear-gradient(180deg,#020202,#050505,#000);
+  color:var(--text);
+  font-family:Georgia,serif;
+}
+
+.wrap{
+  max-width:1200px;
+  margin:auto;
+  padding:50px 20px;
+  text-align:center;
+}
+
+h1{
+  color:var(--gold);
+  font-size:56px;
+}
+
+.subtitle{
+  color:var(--soft);
+  max-width:800px;
+  margin:0 auto 40px;
+  font-style:italic;
+}
+
+.box{
+  border:1px solid var(--line);
+  border-radius:20px;
+  padding:22px;
+  margin:25px auto;
+  max-width:760px;
+  background:rgba(255,255,255,0.03);
+  opacity:0;
+  transform:translateY(25px);
+  animation:fade 1.2s ease forwards;
+}
+
+@keyframes fade{
+  to{opacity:1;transform:none}
+}
+
+.arrow{
+  font-size:28px;
+  color:var(--gold);
+}
+
+.columns{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:30px;
+  margin-top:30px;
+}
+
+.col{
+  border:1px solid var(--line);
+  border-radius:20px;
+  padding:20px;
+  background:rgba(255,255,255,0.02);
+}
+
+.step{
+  margin:18px 0;
+  padding:16px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:rgba(245,211,75,0.05);
+  text-align:left;
+}
+
+.step b{
+  display:block;
+  color:var(--soft);
+  margin-bottom:6px;
+}
+
+.merge{
+  margin-top:50px;
+  padding:25px;
+  border:1px solid var(--line);
+  border-radius:20px;
+  max-width:700px;
+  margin-left:auto;
+  margin-right:auto;
+}
+
+.formula{
+  font-size:26px;
+  color:var(--gold);
+  margin:15px 0;
+}
+
+.note{
+  margin-top:30px;
+  color:var(--muted);
+  max-width:800px;
+  margin-left:auto;
+  margin-right:auto;
+}
+
+@media(max-width:900px){
+  .columns{grid-template-columns:1fr;}
+}
+</style>
+</head>
+
+<body>
+<div class="wrap">
+
+<h1>Protocol Flow</h1>
+
+<div class="subtitle">
+One order is decomposed into shards, autonomously routed by the protocol,
+and converges into a single deterministic validation condition.
+</div>
+
+<!-- ORDER -->
+<div class="box">
+<b>Order Initialization</b><br><br>
+The buyer submits an order for a defined quantity of asset (e.g. gold).
+Funds are immediately locked in protocol-controlled escrow,
+ensuring that execution can only proceed under validated conditions.
+</div>
+
+<div class="arrow">↓</div>
+
+<!-- SHARDING -->
+<div class="box">
+<b>Order Sharding</b><br><br>
+The order is decomposed into multiple execution shards.
+Each shard represents a portion of the total order,
+with quantity and distribution generated according to protocol rules.
+<br><br>
+Sharding occurs prior to any execution path selection.
+</div>
+
+<div class="arrow">↓</div>
+
+<!-- ALLOCATION -->
+<div class="box">
+<b>Protocol Allocation Engine</b><br><br>
+
+Each shard is independently routed by the protocol.
+Allocation is not decided by any participant,
+but emerges from protocol-level optimization logic.
+<br><br>
+
+Shards are distributed across two execution channels:
+<br><br>
+
+<span style="color:var(--soft)">
+• Bootstrap Channel → expands the VRS layer<br>
+• Internal Channel → operates on existing verified reserves
+</span>
+
+<br><br>
+
+Allocation criteria include:
+<br>
+<span style="color:var(--muted)">
+• reinforcement of existing vault capacity<br>
+• integration of new vaults from approved candidates<br>
+• optimization of reserve distribution and system liquidity
+</span>
+
+<br><br>
+
+<i>Execution is determined per shard, not per order.</i>
+</div>
+
+<div class="arrow">↓</div>
+
+<div class="columns">
+
+<!-- BOOTSTRAP -->
+<div class="col">
+<h2 style="color:var(--gold)">Bootstrap Path</h2>
+<i>VRS Layer Construction</i>
+
+<div class="step">
+<b>External Issuer (Physical Seller)</b>
+The issuer in this phase is not a monetary authority,
+but the physical provider of the asset entering the system.
+</div>
+
+<div class="step">
+<b>Case 1 — External Acquisition</b>
+The issuer acquires gold outside the protocol using its own capital.
+This creates capital exposure until validation is completed.
+</div>
+
+<div class="step">
+<b>Case 2 — Pre-Owned Asset</b>
+The issuer already holds physical gold not yet registered in VRS
+and uses the protocol to onboard it into the system.
+</div>
+
+<div class="step">
+<b>Protocol-Controlled Transport</b>
+Transport is assigned by the protocol.
+Direct coordination between participants is minimized.
+</div>
+
+<div class="step">
+<b>Vault Entry and Audit</b>
+The asset enters vault custody.
+Auditors verify its physical existence, quantity and consistency.
+</div>
+
+<div class="step">
+<b>Validation Layer</b>
+Validators confirm certificates, ownership references and protocol state.
+</div>
+
+<div class="step">
+<b>VRS Expansion</b>
+The verified asset is added to the Verified Reserve State,
+expanding the system’s physical layer.
+</div>
+
+</div>
+
+<!-- INTERNAL -->
+<div class="col">
+<h2 style="color:var(--gold)">Internal Transfer Path</h2>
+<i>VRS-Native Exchange</i>
+
+<div class="step">
+<b>Internal Issuer (Protocol Function)</b>
+Inside the protocol, issuer is no longer an entity.
+It is an automatic function governing execution.
+</div>
+
+<div class="step">
+<b>Verified Ownership</b>
+The seller already holds VRS-backed ownership,
+eliminating the need for physical asset movement.
+</div>
+
+<div class="step">
+<b>Shard Matching</b>
+Buyer shards are matched with seller shards.
+Matching is non-linear, distributed and protocol-driven.
+</div>
+
+<div class="step">
+<b>Case 3 — Ownership Acquisition</b>
+A participant may first act as a buyer,
+acquire VRS ownership, and later become a seller.
+</div>
+
+<div class="step">
+<b>Audit Consistency Check</b>
+Auditors verify that the VRS remains consistent and valid.
+</div>
+
+<div class="step">
+<b>Validation Layer</b>
+Validators confirm shard integrity, ownership state and invariants.
+</div>
+
+<div class="step">
+<b>Ownership Reallocation</b>
+Ownership is reassigned through state transition.
+No physical transfer occurs.
+</div>
+
+</div>
+
+</div>
+
+<!-- MERGE -->
+<div class="merge">
+<b>Common Final Condition</b>
+
+<div class="formula">
+I(sᵢ) = 1 ⇔ Valid(sᵢ)
+</div>
+
+Issuance depends exclusively on validity conditions,
+not on execution path.
+</div>
+
+<!-- NOTE -->
+<div class="note">
+The protocol emits the final ownership token.<br>
+The issuer does not emit currency.<br><br>
+
+External issuer = physical asset provider<br>
+Internal issuer = protocol execution function
+</div>
+
+</div>
+</body>
+</html>
