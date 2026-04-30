@@ -8,7 +8,6 @@
 
   <style>
     :root {
-      --bg: #050505;
       --gold: #f5d34b;
       --gold-soft: #ffe680;
       --text: #f8f1c4;
@@ -27,11 +26,10 @@
       color: var(--text);
       font-family: Georgia, "Times New Roman", serif;
       min-height: 100vh;
-      overflow-x: hidden;
     }
 
     .wrap {
-      width: min(900px, calc(100% - 34px));
+      width: min(1200px, calc(100% - 34px));
       margin: 0 auto;
       padding: 56px 0 80px;
       text-align: center;
@@ -46,43 +44,35 @@
     }
 
     .subtitle {
-      max-width: 680px;
-      margin: 0 auto 42px;
+      max-width: 780px;
+      margin: 0 auto 48px;
       color: var(--gold-soft);
       font-size: 20px;
       line-height: 1.55;
       font-style: italic;
     }
 
-    .flow {
-      position: relative;
-      max-width: 660px;
-      margin: 0 auto;
+    .flow-columns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 34px;
+      align-items: start;
     }
 
-    .step {
-      position: relative;
-      border: 1px solid var(--line);
-      background: linear-gradient(135deg, rgba(245,211,75,0.12), rgba(245,211,75,0.035));
-      border-radius: 22px;
-      padding: 24px 26px;
-      margin: 0 auto 28px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.34), 0 0 24px rgba(245,211,75,0.07);
+    .column {
+      border: 1px solid rgba(245,211,75,0.22);
+      border-radius: 28px;
+      padding: 26px 22px;
+      background: rgba(255,255,255,0.025);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.34);
       opacity: 0;
-      transform: translateY(34px);
+      transform: translateY(28px);
       animation: appear 0.8s ease forwards;
     }
 
-    .step:nth-of-type(1) { animation-delay: 0.1s; }
-    .step:nth-of-type(2) { animation-delay: 0.35s; }
-    .step:nth-of-type(3) { animation-delay: 0.6s; }
-    .step:nth-of-type(4) { animation-delay: 0.85s; }
-    .step:nth-of-type(5) { animation-delay: 1.1s; }
-    .step:nth-of-type(6) { animation-delay: 1.35s; }
-    .step:nth-of-type(7) { animation-delay: 1.6s; }
-    .step:nth-of-type(8) { animation-delay: 1.85s; }
-    .step:nth-of-type(9) { animation-delay: 2.1s; }
-    .step:nth-of-type(10) { animation-delay: 2.35s; }
+    .column:nth-child(2) {
+      animation-delay: 0.18s;
+    }
 
     @keyframes appear {
       to {
@@ -91,108 +81,115 @@
       }
     }
 
-    .step h2 {
+    .column h2 {
+      color: var(--gold);
+      font-size: 30px;
       margin: 0 0 10px;
-      color: var(--gold-soft);
-      font-size: 24px;
     }
 
-    .step p {
-      margin: 0;
-      font-size: 17px;
-      line-height: 1.6;
+    .column-intro {
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.5;
+      margin-bottom: 26px;
+    }
+
+    .step {
+      border: 1px solid var(--line);
+      background: linear-gradient(135deg, rgba(245,211,75,0.12), rgba(245,211,75,0.035));
+      border-radius: 20px;
+      padding: 20px;
+      margin: 0 auto 18px;
+      box-shadow: 0 14px 40px rgba(0,0,0,0.28), 0 0 18px rgba(245,211,75,0.06);
+      opacity: 0;
+      transform: translateY(22px);
+      animation: stepIn 0.7s ease forwards;
+    }
+
+    .column .step:nth-of-type(1) { animation-delay: 0.25s; }
+    .column .step:nth-of-type(2) { animation-delay: 0.40s; }
+    .column .step:nth-of-type(3) { animation-delay: 0.55s; }
+    .column .step:nth-of-type(4) { animation-delay: 0.70s; }
+    .column .step:nth-of-type(5) { animation-delay: 0.85s; }
+    .column .step:nth-of-type(6) { animation-delay: 1.00s; }
+    .column .step:nth-of-type(7) { animation-delay: 1.15s; }
+
+    @keyframes stepIn {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .step strong {
+      display: block;
+      color: var(--gold-soft);
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+
+    .step span {
+      display: block;
+      font-size: 15.5px;
+      line-height: 1.55;
       color: var(--text);
     }
 
     .arrow {
       color: var(--gold);
-      font-size: 34px;
-      margin: -12px 0 14px;
+      font-size: 26px;
+      margin: -6px 0 10px;
+      opacity: 0.85;
+    }
+
+    .merge-box {
+      margin: 58px auto 0;
+      max-width: 720px;
+      text-align: center;
+      border: 1px solid rgba(245,211,75,0.35);
+      padding: 28px;
+      border-radius: 24px;
+      background:
+        radial-gradient(circle at top, rgba(245,211,75,0.12), transparent 42%),
+        rgba(255,255,255,0.03);
+      box-shadow: 0 0 34px rgba(245,211,75,0.12);
+      color: var(--text);
+      font-size: 18px;
+      line-height: 1.65;
       opacity: 0;
-      animation: fadeArrow 0.6s ease forwards;
+      transform: translateY(28px);
+      animation: appear 0.85s ease forwards;
+      animation-delay: 1.35s;
     }
 
-    .arrow:nth-of-type(1) { animation-delay: 0.28s; }
-    .arrow:nth-of-type(2) { animation-delay: 0.53s; }
-    .arrow:nth-of-type(3) { animation-delay: 0.78s; }
-    .arrow:nth-of-type(4) { animation-delay: 1.03s; }
-    .arrow:nth-of-type(5) { animation-delay: 1.28s; }
-    .arrow:nth-of-type(6) { animation-delay: 1.53s; }
-    .arrow:nth-of-type(7) { animation-delay: 1.78s; }
-    .arrow:nth-of-type(8) { animation-delay: 2.03s; }
-    .arrow:nth-of-type(9) { animation-delay: 2.28s; }
-
-    @keyframes fadeArrow {
-      to { opacity: 0.85; }
-    }
-
-    .shards {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 10px;
-      margin-top: 16px;
-    }
-
-    .shard {
-      border: 1px solid rgba(245,211,75,0.28);
-      border-radius: 999px;
-      padding: 8px 13px;
+    .merge-box strong {
       color: var(--gold-soft);
+      font-size: 23px;
+    }
+
+    .formula {
+      margin: 20px auto;
+      padding: 18px;
+      border: 1px solid rgba(245,211,75,0.24);
+      border-radius: 18px;
       background: rgba(0,0,0,0.28);
-      font-size: 14px;
-      animation: pulse 3.2s ease-in-out infinite;
-    }
-
-    .shard:nth-child(2) { animation-delay: 0.4s; }
-    .shard:nth-child(3) { animation-delay: 0.8s; }
-    .shard:nth-child(4) { animation-delay: 1.2s; }
-
-    @keyframes pulse {
-      0%, 100% { box-shadow: 0 0 0 rgba(245,211,75,0); }
-      50% { box-shadow: 0 0 18px rgba(245,211,75,0.22); }
-    }
-
-    .role-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-      margin-top: 18px;
-    }
-
-    .role {
-      border: 1px solid rgba(245,211,75,0.20);
-      border-radius: 16px;
-      padding: 14px;
-      background: rgba(0,0,0,0.25);
-    }
-
-    .role strong {
-      display: block;
-      color: var(--gold-soft);
-      margin-bottom: 6px;
-    }
-
-    .role span {
-      font-size: 14px;
-      color: var(--muted);
-      line-height: 1.4;
+      color: var(--gold);
+      font-size: clamp(22px, 4vw, 32px);
+      font-weight: bold;
+      line-height: 1.45;
     }
 
     .note {
-      margin-top: 44px;
-      border: 1px solid rgba(245,211,75,0.18);
-      background: rgba(255,255,255,0.025);
-      border-radius: 22px;
-      padding: 24px;
+      max-width: 720px;
+      margin: 34px auto 0;
       color: var(--muted);
       font-size: 16px;
-      line-height: 1.65;
+      line-height: 1.6;
     }
 
     .back {
       display: inline-block;
-      margin-top: 34px;
+      margin-top: 42px;
       border: 1px solid var(--line);
       padding: 13px 20px;
       border-radius: 999px;
@@ -204,253 +201,160 @@
 
     .back:hover { text-decoration: underline; }
 
-    @media (max-width: 700px) {
-      .role-grid { grid-template-columns: 1fr; }
-      .step { padding: 21px 20px; }
+    @media (max-width: 900px) {
+      .flow-columns {
+        grid-template-columns: 1fr;
+      }
     }
-
-
-.flow-note {
-  margin: 30px auto 40px;
-  padding: 22px 24px;
-  max-width: 600px;
-  border-radius: 18px;
-
-  background: linear-gradient(
-    135deg,
-    rgba(245,211,75,0.12),
-    rgba(245,211,75,0.03)
-  );
-
-  border: 1px solid rgba(245,211,75,0.25);
-
-  box-shadow:
-    0 0 25px rgba(245,211,75,0.12),
-    inset 0 0 25px rgba(245,211,75,0.05);
-
-  text-align: center;
-}
-
-.flow-note strong {
-  display: block;
-  margin-bottom: 10px;
-  color: var(--gold-soft);
-  font-size: 18px;
-  letter-spacing: 0.03em;
-}
-
-.flow-note span {
-  font-size: 15px;
-  line-height: 1.6;
-  color: var(--text);
-}
-
-
-
-
-
   </style>
 </head>
 
 <body>
   <main class="wrap">
+
     <h1>Protocol Flow</h1>
 
     <div class="subtitle">
-      Blind Sharded Issuance: ownership is generated only when custody, audit,
-      validation, and settlement conditions are completed correctly.
+      Two execution paths, one final condition:
+      issuance occurs only when protocol state is valid.
     </div>
 
-    <div class="flow">
+    <div class="flow-columns">
 
-      <div class="step">
-        <h2>1. Buyer Order</h2>
-        <p>
-          The buyer places an order, for example <strong>1 kg of gold</strong>.
-          Buyer funds are locked in escrow and cannot be released until validation is complete.
-        </p>
-      </div>
+      <!-- LEFT COLUMN -->
+      <div class="column">
+        <h2>External Issuer Path</h2>
+        <div class="column-intro">
+          Used during bootstrap or VRS expansion, when new physical assets enter the system.
+        </div>
 
-      <div class="arrow">↓</div>
+        <div class="step">
+          <strong>1. Buyer Locks Funds</strong>
+          <span>The buyer submits an order and funds are locked in protocol-controlled escrow.</span>
+        </div>
 
-      <div class="step">
-        <h2>2. Order Fragmentation</h2>
-        <p>
-          The protocol fragments the order into independent execution shards.
-          Each shard represents only a partial quantity of the total order.
-        </p>
+        <div class="arrow">↓</div>
 
-        <div class="shards">
-          <div class="shard">Shard #1 — 50g</div>
-          <div class="shard">Shard #2 — 30g</div>
-          <div class="shard">Shard #3 — 120g</div>
-          <div class="shard">Shard #n — ...</div>
+        <div class="step">
+          <strong>2. Physical Seller / Issuer Enters</strong>
+          <span>A real-world seller provides gold not yet included in the Verified Reserve State.</span>
+        </div>
+
+        <div class="arrow">↓</div>
+
+        <div class="step">
+          <strong>3. Asset Acquisition or Provision</strong>
+          <span>The issuer either acquires gold externally or provides pre-owned gold not yet registered in VRS.</span>
+        </div>
+
+        <div class="arrow">↓</div>
+
+        <div class="step">
+          <strong>4. Protocol-Assigned Transport</strong>
+          <span>The protocol assigns transport and custody routing. Direct actor coordination is minimized.</span>
+        </div>
+
+        <div class="arrow">↓</div>
+
+        <div class="step">
+          <strong>5. Vault Entry and Audit</strong>
+          <span>The asset enters vault custody. Auditors verify physical existence, quantity, and consistency.</span>
+        </div>
+
+        <div class="arrow">↓</div>
+
+        <div class="step">
+          <strong>6. Validator Confirmation</strong>
+          <span>Validators verify certificates, signatures, shard references, and protocol state consistency.</span>
+        </div>
+
+        <div class="arrow">↓</div>
+
+        <div class="step">
+          <strong>7. VRS Expansion</strong>
+          <span>The verified asset expands the Verified Reserve State. Only after validation may escrow be released.</span>
         </div>
       </div>
 
-      <div class="arrow">↓</div>
+      <!-- RIGHT COLUMN -->
+      <div class="column">
+        <h2>Internal VRS-Native Path</h2>
+        <div class="column-intro">
+          Used after VRS exists, when exchange occurs through verified ownership reallocation.
+        </div>
 
-      <div class="step">
-        <h2>3. Demand / Supply Matching</h2>
-        <p>
-          Each purchase shard is deterministically matched with corresponding supply-side shards.
-          Every acquisition corresponds to a verified sale or delivery obligation.
-        </p>
-      </div>
+        <div class="step">
+          <strong>1. Buyer Locks Funds</strong>
+          <span>The buyer submits an order and funds are locked until protocol completion.</span>
+        </div>
 
-      <div class="arrow">↓</div>
+        <div class="arrow">↓</div>
 
-      <div class="step">
-        <h2>4. Probabilistic Role Distribution</h2>
-        <p>
-          For each shard, the protocol assigns execution responsibilities across different actors.
-          No single participant receives full visibility over the complete order.
-        </p>
+        <div class="step">
+          <strong>2. Seller Holds VRS Ownership</strong>
+          <span>The seller already owns verified VRS-backed ownership inside the protocol.</span>
+        </div>
 
-        <div class="role-grid">
-          <div class="role">
-            <strong>Issuer Function</strong>
-            <span>Executes assigned acquisition logic and commits capital exposure.</span>
-          </div>
-          <div class="role">
-            <strong>Vault</strong>
-            <span>Receives and records the physical asset for its assigned shard.</span>
-          </div>
-          <div class="role">
-            <strong>Auditor Set</strong>
-            <span>Validates shard-specific custody and real-world event consistency.</span>
-          </div>
+        <div class="arrow">↓</div>
+
+        <div class="step">
+          <strong>3. Shard Fragmentation</strong>
+          <span>Buyer and seller orders are fragmented into execution shards.</span>
+        </div>
+
+        <div class="arrow">↓</div>
+
+        <div class="step">
+          <strong>4. Non-Linear Matching</strong>
+          <span>Buyer shards are matched with seller shards. Matching is many-to-many and protocol-driven.</span>
+        </div>
+
+        <div class="arrow">↓</div>
+
+        <div class="step">
+          <strong>5. Auditor Verification</strong>
+          <span>Auditors verify that the relevant VRS and custody references remain consistent.</span>
+        </div>
+
+        <div class="arrow">↓</div>
+
+        <div class="step">
+          <strong>6. Validator Confirmation</strong>
+          <span>Validators verify ownership state, signatures, shard integrity, and invariant compliance.</span>
+        </div>
+
+        <div class="arrow">↓</div>
+
+        <div class="step">
+          <strong>7. Ownership Reallocation</strong>
+          <span>No physical movement occurs. Verified ownership is reassigned through protocol state transition.</span>
         </div>
       </div>
 
-      <div class="arrow">↓</div>
+    </div>
 
-      <div class="step">
-        <h2>5. Physical Transfer</h2>
+    <!-- MERGE BOX -->
+    <div class="merge-box">
+      <strong>Common Final Condition</strong>
 
-
-
-
-
-<div class="flow-note">
-<strong>Physical Reserve Layer Formation</strong>
-  <span>
-    Physical transfer is required during the initial bootstrap phase,
-    when verified reserves are first introduced into the system.<br><br>
-
-    Each completed and validated shard contributes to the formation
-    of a persistent physical reserve layer within vaults.<br><br>
-
-    As this layer grows, an increasing share of transactions operates
-    on already verified custody, enabling ownership transfer
-    without physical movement.
-  </span>
-</div>
-
-
-
-
-
-        <p>
-          The physical asset is moved through the logistics layer.
-          Transport delivers the allocated gold portions to qualified vaults
-          such as Vault 1, Vault 2, and additional vault institutions.
-        </p>
+      <div class="formula">
+        I(s<sub>i</sub>) = 1 if and only if Valid(s<sub>i</sub>)
       </div>
 
-      <div class="arrow">↓</div>
+      Issuance is not path-dependent.<br>
+      It is condition-dependent.<br><br>
 
-      <div class="step">
-        <h2>6. Auditor Intervention</h2>
-        <p>
-          Auditors verify that the relevant real-world events occurred correctly:
-          delivery, custody evidence, quantity, purity, and consistency with the shard record.
-        </p>
-      </div>
-
-
-      
-<div class="flow-note">
-  <strong>Custody Boundary and Reserve Reconciliation</strong>
-  <span>
-    Nexus does not eliminate the physical custody boundary:
-    assets must always be held by real-world custodians.<br><br>
-
-    Instead, the protocol reduces the role of audit to a precise function:
-    verifying that physical reserves held in vaults remain consistent
-    with the Verified Reserve State (VRS).<br><br>
-
-    Auditors do not reconstruct individual ownership allocations at the
-    physical level. They verify aggregate reserve correspondence,
-    while ownership integrity is enforced by the protocol state.
-  </span>
-</div>
-
-
-
-      
-
-      <div class="arrow">↓</div>
-
-
-
-
-
-
-
-      
-      <div class="step">
-        <h2>7. Validator Intervention</h2>
-        <p>
-          Validators verify cryptographic and protocol-level conditions:
-          signatures, registered keys, shard identifiers, non-reuse of custody records,
-          and consistency with the protocol state.
-        </p>
-      </div>
-
-      <div class="arrow">↓</div>
-
-      <div class="step">
-        <h2>8. Protocol Reconstruction</h2>
-        <p>
-          Validated shards are reconstructed at protocol level.
-          The full allocation is not controlled by any single participant,
-          but emerges from verified shard completion.
-        </p>
-      </div>
-
-      <div class="arrow">↓</div>
-
-      <div class="step">
-        <h2>9. Issuance as Protocol Outcome</h2>
-        <p>
-          If all required shard conditions are valid, ownership units are generated.
-          Issuance is not a discretionary act by an entity:
-          it is the final protocol consequence of successful verification.
-        </p>
-      </div>
-
-      <div class="arrow">↓</div>
-
-      <div class="step">
-        <h2>10. Escrow Release</h2>
-        <p>
-          Once minting is finalized, escrowed funds are released to the corresponding sellers
-          or shard-side liquidity providers according to protocol rules.
-        </p>
-      </div>
-
+      No ownership is generated unless custody, audit, validation,
+      and protocol invariants are satisfied.
     </div>
 
     <div class="note">
-      <strong>Clarification:</strong>
-      in this model, the “issuer” is best understood as a protocol-bounded issuance function
-      or execution role, not as an unconstrained central authority. Digital ownership emerges
-      only after shard execution, real-world validation, cryptographic verification, and protocol
-      reconstruction are completed.
+      External issuance expands VRS. Internal execution reallocates verified ownership.
+      Both paths converge into the same deterministic protocol rule.
     </div>
 
     <a class="back" href="./index.html">← Back to main site</a>
+
   </main>
 </body>
 </html>
