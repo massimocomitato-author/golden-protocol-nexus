@@ -1,0 +1,26 @@
+Golden Protocol Nexus — Proof of Existence
+
+Document:
+Golden_Protocol_Nexus VRS-Native_exchange_layer_upgrade
+
+SHA256:
+4a582f181fa3850494c6dc04064b90aebae8d453e61fe6259550d80133821aa8
+
+
+Bitcoin Timestamp:
+Anchored via OpenTimestamps
+
+Block Height:
+
+Bitcoin block 947241 
+
+Timestamp Date (approx):
+2026-04-30
+
+Verification:
+This hash can be independently verified against the Bitcoin blockchain
+using OpenTimestamps.
+
+Files:
+- Original document (PDF)
+- Corresponding .ots proof file
