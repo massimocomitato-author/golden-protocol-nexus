@@ -114,6 +114,25 @@ h1{
   margin-right:auto;
 }
 
+.back {
+  display:inline-block;
+  margin-top:42px;
+  border:1px solid var(--line);
+  padding:13px 20px;
+  border-radius:999px;
+  color:var(--soft);
+  background:rgba(245,211,75,0.08);
+  text-decoration:none;
+  font-weight:bold;
+}
+
+.back:hover {
+  text-decoration:underline;
+}
+
+
+
+ 
 @media(max-width:900px){
   .columns{grid-template-columns:1fr;}
 }
@@ -150,8 +169,36 @@ with quantity and distribution generated according to protocol rules.
 Sharding occurs prior to any execution path selection.
 </div>
 
+
 <div class="arrow">↓</div>
 
+<div class="box">
+<b>Buyer and Seller Shards</b><br><br>
+
+Both buy orders and sell orders are decomposed into shards.
+The seller does not execute a full order as a single block.
+
+Seller shards are randomly and anonymously matched with buyer shards
+through protocol-level allocation.
+<br><br>
+
+Each participant can track only their own execution flow:
+buyers can follow their buyer shards,
+and sellers can follow their seller shards.
+<br><br>
+
+The protocol preserves a historical record of buy and sell shards,
+with cryptographic proofs and unique identification codes.
+</div>
+
+
+
+<div class="arrow">↓</div>
+
+
+
+
+  
 <!-- ALLOCATION -->
 <div class="box">
 <b>Protocol Allocation Engine</b><br><br>
@@ -306,6 +353,18 @@ External issuer = physical asset provider<br>
 Internal issuer = protocol execution function
 </div>
 
+
+
+<a class="back" href="./index.html">← Back to main site</a>
+
+
+
+
+
+
+
+
+  
 </div>
 </body>
 </html>
