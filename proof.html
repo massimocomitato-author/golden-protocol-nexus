@@ -1,7 +1,56 @@
 
 
-<div class="hash">
 
+
+
+.page-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 80vh;
+  padding: 40px 20px;
+}
+
+.page-card {
+  max-width: 720px;
+  width: 100%;
+  padding: 48px;
+  border-radius: 28px;
+
+  background: rgba(20,20,20,0.6);
+  border: 1px solid rgba(245,211,75,0.2);
+
+  backdrop-filter: blur(12px);
+
+  box-shadow: 0 30px 80px rgba(0,0,0,0.4);
+
+  text-align: center;
+}
+
+.page-card h1 {
+  font-size: 32px;
+  margin-bottom: 24px;
+  color: var(--gold);
+}
+
+.page-card p {
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--text-soft);
+  margin-bottom: 16px;
+}
+
+.signature {
+  margin-top: 40px;
+  opacity: 0.6;
+  font-style: italic;
+}
+
+
+
+
+<section class="hash">
+ <div>
   <details>
     <summary>
       <strong>Founder Paper SHA256</strong><br>
@@ -199,5 +248,9 @@
       - Corresponding .ots proof file
     </div>
   </details>
+ </div>
+</section>
+
+
 
 
