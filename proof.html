@@ -1,74 +1,286 @@
 
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Golden Protocol Nexus — Proof of Existence</title>
+
+  <style>
+    :root {
+      --gold: #f5d34b;
+      --gold-soft: #ffe680;
+      --text: #f8f1c4;
+      --muted: #b9aa65;
+      --line: rgba(245, 211, 75, 0.28);
+      --panel: rgba(245, 211, 75, 0.075);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      background: #020202;
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    #network-bg {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -3;
+      background: #020202;
+    }
+
+    .page-glow {
+      position: fixed;
+      inset: 0;
+      z-index: -2;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 50% 12%, rgba(245, 211, 75, 0.18), transparent 34%),
+        radial-gradient(circle at 15% 80%, rgba(245, 211, 75, 0.08), transparent 26%),
+        radial-gradient(circle at 80% 22%, rgba(70, 120, 180, 0.10), transparent 24%),
+        linear-gradient(180deg, rgba(0,0,0,0.02), rgba(0,0,0,0.86));
+    }
+
+    .stars {
+      position: fixed;
+      inset: 0;
+      z-index: -2;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 18% 28%, rgba(255,255,255,0.75) 0 1px, transparent 2px),
+        radial-gradient(circle at 38% 18%, rgba(245,211,75,0.75) 0 1px, transparent 2px),
+        radial-gradient(circle at 62% 32%, rgba(255,255,255,0.68) 0 1px, transparent 2px),
+        radial-gradient(circle at 82% 18%, rgba(245,211,75,0.85) 0 1px, transparent 2px),
+        radial-gradient(circle at 72% 58%, rgba(255,255,255,0.55) 0 1px, transparent 2px),
+        radial-gradient(circle at 10% 72%, rgba(245,211,75,0.52) 0 1px, transparent 2px);
+      background-size: 280px 280px, 360px 360px, 420px 420px, 500px 500px, 460px 460px, 380px 380px;
+      animation: starDrift 95s linear infinite;
+      opacity: 0.85;
+    }
+
+    @keyframes starDrift {
+      from { background-position: 0 0, 0 0, 0 0, 0 0, 0 0, 0 0; }
+      to { background-position: 280px 280px, -360px 360px, 420px -420px, -500px -500px, 460px 460px, -380px 380px; }
+    }
+
+    .planet {
+      position: fixed;
+      border-radius: 50%;
+      z-index: -1;
+      pointer-events: none;
+      opacity: 0.46;
+      border: 1px solid rgba(245,211,75,0.20);
+      box-shadow: 0 0 34px rgba(245,211,75,0.12);
+    }
+
+    .planet.one {
+      width: 170px;
+      height: 170px;
+      left: 7%;
+      top: 18%;
+      background:
+        radial-gradient(circle at 34% 28%, rgba(255,230,128,0.50), transparent 10%),
+        radial-gradient(circle at 36% 32%, #2b2414 0%, #15110b 48%, #050505 72%);
+      animation: planetFloatOne 48s ease-in-out infinite alternate;
+    }
+
+    .planet.two {
+      width: 260px;
+      height: 260px;
+      right: -70px;
+      top: 16%;
+      background:
+        radial-gradient(circle at 30% 28%, rgba(255,230,128,0.38), transparent 9%),
+        radial-gradient(circle at 34% 36%, #2b281c 0%, #0f1319 52%, #020202 74%);
+      animation: planetFloatTwo 58s ease-in-out infinite alternate;
+    }
+
+    .planet.three {
+      width: 72px;
+      height: 72px;
+      left: 15%;
+      bottom: 14%;
+      background:
+        radial-gradient(circle at 35% 30%, rgba(255,230,128,0.45), transparent 10%),
+        radial-gradient(circle, #221b11, #030303 72%);
+      animation: planetFloatThree 44s ease-in-out infinite alternate;
+    }
+
+    @keyframes planetFloatOne {
+      0% { transform: translate3d(-18px, 10px, 0) rotate(-20deg); }
+      100% { transform: translate3d(78px, 18px, 0) rotate(-5deg); }
+    }
+
+    @keyframes planetFloatTwo {
+      0% { transform: translate3d(18px, -8px, 0); }
+      100% { transform: translate3d(-118px, -20px, 0); }
+    }
+
+    @keyframes planetFloatThree {
+      0% { transform: translate3d(-10px, 8px, 0); }
+      100% { transform: translate3d(70px, 14px, 0); }
+    }
+
+    .wrap {
+      width: min(980px, calc(100% - 34px));
+      margin: 0 auto;
+      padding: 70px 0 90px;
+      text-align: center;
+    }
+
+    h1 {
+      color: var(--gold);
+      font-size: clamp(40px, 7vw, 76px);
+      margin: 0 0 18px;
+      letter-spacing: -0.045em;
+      text-shadow: 0 0 34px rgba(245,211,75,0.30);
+    }
+
+    .subtitle {
+      max-width: 760px;
+      margin: 0 auto 42px;
+      color: var(--gold-soft);
+      font-size: 20px;
+      line-height: 1.6;
+      font-style: italic;
+    }
+
+    .main-card {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 34px;
+      border-radius: 30px;
+      border: 1px solid rgba(245,211,75,0.30);
+      background:
+        radial-gradient(circle at top, rgba(245,211,75,0.12), transparent 40%),
+        rgba(10,10,10,0.70);
+      box-shadow:
+        0 30px 90px rgba(0,0,0,0.50),
+        0 0 34px rgba(245,211,75,0.09);
+      backdrop-filter: blur(10px);
+    }
+
+    .main-card p {
+      font-size: 18px;
+      line-height: 1.7;
+      color: var(--text);
+      margin: 0 auto 18px;
+      max-width: 720px;
+    }
+
+    .proof-item {
+      margin: 24px auto 0;
+      padding: 22px;
+      border-radius: 22px;
+      border: 1px solid rgba(245,211,75,0.24);
+      background: rgba(255,255,255,0.035);
+      text-align: left;
+      box-shadow: inset 0 0 28px rgba(245,211,75,0.035);
+    }
+
+    .proof-item h2 {
+      margin: 0 0 12px;
+      color: var(--gold-soft);
+      font-size: 24px;
+      text-align: center;
+    }
+
+    .proof-meta {
+      color: var(--text);
+      font-size: 15.5px;
+      line-height: 1.7;
+    }
+
+    .hash {
+      margin: 16px 0;
+      padding: 16px;
+      border-radius: 16px;
+      border: 1px solid rgba(245,211,75,0.18);
+      background: rgba(0,0,0,0.38);
+      color: var(--gold);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 13px;
+      line-height: 1.55;
+      word-break: break-all;
+    }
+
+    .status {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(245,211,75,0.25);
+      color: var(--gold-soft);
+      background: rgba(245,211,75,0.08);
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    .back {
+      display: inline-block;
+      margin-top: 34px;
+      border: 1px solid var(--line);
+      padding: 13px 20px;
+      border-radius: 999px;
+      color: var(--gold-soft);
+      background: rgba(245,211,75,0.08);
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    .back:hover { text-decoration: underline; }
+
+    footer {
+      margin-top: 42px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    @media (max-width: 700px) {
+      .main-card { padding: 24px 18px; }
+      .proof-item { text-align: center; }
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="network-bg"></canvas>
+  <div class="page-glow" aria-hidden="true"></div>
+  <div class="stars" aria-hidden="true"></div>
+  <div class="planet one" aria-hidden="true"></div>
+  <div class="planet two" aria-hidden="true"></div>
+  <div class="planet three" aria-hidden="true"></div>
+
+  <main class="wrap">
+    <h1>Proof of Existence</h1>
+
+    <div class="subtitle">
+      Cryptographic publication record for Golden Protocol Nexus documents.
+      Each document may be independently verified through its SHA256 hash and Bitcoin timestamp proof.
+    </div>
+
+    <section class="main-card">
+      <p>
+        This page records the cryptographic fingerprints of official Golden Protocol Nexus documents.
+        Hashes provide document integrity, while OpenTimestamps anchors proof of existence to Bitcoin.
+      </p>
 
 
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "Person",
-  "name": "Massimo Comitato",
-  "url": "https://goldenprotocolnexus.org",
-  "sameAs": [
-    "https://www.linkedin.com/in/massimo-comitato",
-    "https://github.com/massimocomitato-author"
-  ],
-  "jobTitle": "Founder",
-  "worksFor": {
-    "@type": "Organization",
-    "name": "Golden Protocol Nexus"
-  }
-}
-</script>
 
-<style>
 
-.page-center {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 80vh;
-  padding: 40px 20px;
-}
 
-.page-card {
-  max-width: 720px;
-  width: 100%;
-  padding: 48px;
-  border-radius: 28px;
 
-  background: rgba(20,20,20,0.6);
-  border: 1px solid rgba(245,211,75,0.2);
 
-  backdrop-filter: blur(12px);
 
-  box-shadow: 0 30px 80px rgba(0,0,0,0.4);
 
-  text-align: center;
-}
 
-.page-card h1 {
-  font-size: 32px;
-  margin-bottom: 24px;
-  color: var(--gold);
-}
-
-.page-card p {
-  font-size: 16px;
-  line-height: 1.7;
-  color: var(--text-soft);
-  margin-bottom: 16px;
-}
-
-.signature {
-  margin-top: 40px;
-  opacity: 0.6;
-  font-style: italic;
-}
-
-</style>
 
 
 <section class="hash">
@@ -268,12 +480,258 @@
       <strong>Files:</strong><br>
       - Original Golden_Protocol_Nexus_Vault_Verification_Execution_Model.pdf document (PDF)<br>
       - Corresponding .ots proof file
-    </div>
+    </div>  
   </details>
  </div>
 </section>
 
-</head>
+    </head>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      
+
+      <div class="proof-item">
+        <h2>Founder Paper</h2>
+        <div class="proof-meta">
+          <strong>Document:</strong><br>
+          Golden_Protocol_Nexus_Founder_Paper_v4.0_GENESIS.pdf
+        </div>
+        <div class="hash">
+          SHA256:<br>
+          45713e85f35da310017e5434b90d702bad2b2b22bc398e968888861c89fc46c32
+        </div>
+        <div class="proof-meta">
+          <strong>Bitcoin Timestamp:</strong> Anchored via OpenTimestamps<br>
+          <strong>Block Height:</strong> 946810<br>
+          <strong>Date:</strong> 2026-04-27
+        </div>
+        <span class="status">Confirmed</span>
+      </div>
+
+      <div class="proof-item">
+        <h2>Technical Invariants</h2>
+        <div class="proof-meta">
+          <strong>Document:</strong><br>
+          Golden_Protocol_Nexus_Technical_Invariants.pdf
+        </div>
+        <div class="hash">
+          SHA256:<br>
+          INSERISCI_HASH_TECHNICAL_INVARIANTS
+        </div>
+        <div class="proof-meta">
+          <strong>Bitcoin Timestamp:</strong> Anchored via OpenTimestamps<br>
+          <strong>Block Height:</strong> 947150<br>
+          <strong>Date:</strong> Bitcoin block 947150 attests existence as of 2026-04-29 CET
+        </div>
+        <span class="status">Confirmed</span>
+      </div>
+
+      <div class="proof-item">
+        <h2>VRS-Native Exchange Layer</h2>
+        <div class="proof-meta">
+          <strong>Document:</strong><br>
+          Golden_Protocol_Nexus_VRS_Native_Exchange_Layer.pdf
+        </div>
+        <div class="hash">
+          SHA256:<br>
+          INSERISCI_HASH_VRS_NATIVE_EXCHANGE_LAYER
+        </div>
+        <div class="proof-meta">
+          <strong>Bitcoin Timestamp:</strong> OpenTimestamps submitted / pending confirmation
+        </div>
+        <span class="status">Pending</span>
+      </div>
+
+      <div class="proof-item">
+        <h2>Vault and Custody Layer Specification</h2>
+        <div class="proof-meta">
+          <strong>Document:</strong><br>
+          Golden_Protocol_Nexus_Vault_and_Custody_Layer_Specification.pdf
+        </div>
+        <div class="hash">
+          SHA256:<br>
+          INSERISCI_HASH_VAULT_CUSTODY_LAYER
+        </div>
+        <div class="proof-meta">
+          <strong>Bitcoin Timestamp:</strong> OpenTimestamps submitted / pending confirmation
+        </div>
+        <span class="status">Pending</span>
+      </div>
+
+      <div class="proof-item">
+        <h2>Vault Verification Execution Model</h2>
+        <div class="proof-meta">
+          <strong>Document:</strong><br>
+          Golden_Protocol_Nexus_Vault_Verification_Execution_Model.pdf
+        </div>
+        <div class="hash">
+          SHA256:<br>
+          INSERISCI_HASH_VAULT_VERIFICATION_MODEL
+        </div>
+        <div class="proof-meta">
+          <strong>Bitcoin Timestamp:</strong> OpenTimestamps submitted / pending confirmation
+        </div>
+        <span class="status">Pending</span>
+      </div>
+
+      <a class="back" href="./index.html">← Back to main site</a>
+    </section>
+
+    <footer>
+      Golden Protocol Nexus · Cryptographic proof record · Published by Massimo Comitato
+    </footer>
+  </main>
+
+  <script>
+    const canvas = document.getElementById('network-bg');
+    const ctx = canvas.getContext('2d');
+    let width, height, nodes, pulses;
+
+    const settings = {
+      nodeCount: 78,
+      maxDistance: 160,
+      nodeSpeed: 0.20,
+      pulseChance: 0.035,
+      gold: '245, 211, 75'
+    };
+
+    function resize() {
+      width = canvas.width = window.innerWidth * window.devicePixelRatio;
+      height = canvas.height = window.innerHeight * window.devicePixelRatio;
+      canvas.style.width = window.innerWidth + 'px';
+      canvas.style.height = window.innerHeight + 'px';
+      ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
+      width = window.innerWidth;
+      height = window.innerHeight;
+      init();
+    }
+
+    function init() {
+      nodes = Array.from({ length: settings.nodeCount }, () => ({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        vx: (Math.random() - 0.5) * settings.nodeSpeed,
+        vy: (Math.random() - 0.5) * settings.nodeSpeed,
+        r: 1.2 + Math.random() * 2.1,
+        phase: Math.random() * Math.PI * 2
+      }));
+      pulses = [];
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = '#020202';
+      ctx.fillRect(0, 0, width, height);
+
+      const links = [];
+
+      for (let i = 0; i < nodes.length; i++) {
+        const a = nodes[i];
+        a.x += a.vx;
+        a.y += a.vy;
+        a.phase += 0.018;
+
+        if (a.x < 0 || a.x > width) a.vx *= -1;
+        if (a.y < 0 || a.y > height) a.vy *= -1;
+
+        for (let j = i + 1; j < nodes.length; j++) {
+          const b = nodes[j];
+          const dx = a.x - b.x;
+          const dy = a.y - b.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+
+          if (dist < settings.maxDistance) {
+            const opacity = (1 - dist / settings.maxDistance) * 0.24;
+            links.push([a, b, opacity]);
+            ctx.beginPath();
+            ctx.moveTo(a.x, a.y);
+            ctx.lineTo(b.x, b.y);
+            ctx.strokeStyle = `rgba(${settings.gold}, ${opacity})`;
+            ctx.lineWidth = 0.7;
+            ctx.stroke();
+          }
+        }
+      }
+
+      if (links.length && Math.random() < settings.pulseChance) {
+        const link = links[Math.floor(Math.random() * links.length)];
+        pulses.push({ a: link[0], b: link[1], t: 0, speed: 0.006 + Math.random() * 0.012 });
+      }
+
+      pulses = pulses.filter(p => p.t <= 1);
+      for (const p of pulses) {
+        p.t += p.speed;
+        const x = p.a.x + (p.b.x - p.a.x) * p.t;
+        const y = p.a.y + (p.b.y - p.a.y) * p.t;
+        const gradient = ctx.createRadialGradient(x, y, 0, x, y, 18);
+        gradient.addColorStop(0, `rgba(${settings.gold}, 0.95)`);
+        gradient.addColorStop(0.35, `rgba(${settings.gold}, 0.45)`);
+        gradient.addColorStop(1, `rgba(${settings.gold}, 0)`);
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(x, y, 18, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      for (const n of nodes) {
+        const glow = 0.45 + Math.sin(n.phase) * 0.25;
+
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, n.r + 5, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${settings.gold}, ${0.035 + glow * 0.05})`;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${settings.gold}, ${0.50 + glow * 0.35})`;
+        ctx.fill();
+      }
+
+      requestAnimationFrame(draw);
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+    draw();
+  </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>
+
+
+
+
+
 </html>
 
 
