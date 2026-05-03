@@ -288,7 +288,74 @@
       .info-grid { grid-template-columns: 1fr; }
     }
   </style>
-</head>
+</head><style>
+
+.theory-master {
+  max-width: 800px;
+  margin: 60px auto;
+  padding: 25px;
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  border-radius: 15px;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(10px);
+}
+
+/* singoli riquadri */
+.theory-box {
+  margin-bottom: 25px;
+  padding: 20px;
+  border: 1px solid rgba(255, 215, 0, 0.2);
+  border-radius: 10px;
+  transition: 0.3s;
+}
+
+.theory-box:hover {
+  border-color: gold;
+  transform: scale(1.02);
+}
+
+/* versione attiva */
+.theory-box.active {
+  border: 1px solid gold;
+  box-shadow: 0 0 15px rgba(255,215,0,0.4);
+}
+
+/* titolo */
+.theory-label {
+  color: gold;
+  font-size: 18px;
+  margin-bottom: 10px;
+}
+
+/* link semplice */
+.theory-link {
+  color: white;
+  text-decoration: none;
+  border-bottom: 1px solid gold;
+}
+
+/* bottoni */
+.theory-buttons {
+  display: flex;
+  gap: 15px;
+  margin-top: 10px;
+}
+
+.btn {
+  padding: 8px 14px;
+  border-radius: 6px;
+  text-decoration: none;
+  border: 1px solid gold;
+  color: gold;
+  transition: 0.3s;
+}
+
+.btn:hover {
+  background: gold;
+  color: black;
+}
+
+</style>
 
 <body>
   <canvas id="network-bg"></canvas>
@@ -315,6 +382,12 @@
 
 
 
+
+
+
+
+      
+
 <br> <br> <br> <br>
 <hr style= "border: 0.5px solid #444; width: 50%; margin:  40px auto;">
 
@@ -337,6 +410,47 @@ Golden Protocol Nexus is one possible implementation of this theoretical framewo
     Fundamental Laws of Closed Native Verification Systems (CNVS)
   </p>
 
+
+
+
+
+<div class="theory-master">
+
+  <!-- VERSION 1.0 -->
+  <div class="theory-box">
+    <p class="theory-label">section site in working</p>
+    <a href="link-v1.pdf" class="theory-link">Open Document</a>
+  </div>
+
+  <!-- VERSION 2.0 -->
+  <div class="theory-box">
+    <p class="theory-label">The Open Theory of CNWS — Version 2.0</p>
+    <a href="link-v2.pdf" class="theory-link">Open Document</a>
+  </div>
+
+  <!-- VERSION 2.1 -->
+  <div class="theory-box active">
+    <p class="theory-label">The Open Theory of CNWS — Version 2.1 (Active)</p>
+
+    <div class="theory-buttons">
+      <a href="link-v2-1.pdf" class="btn download" download>Download PDF</a>
+      <a href="link-v2-1-view.html" class="btn view">View Document</a>
+    </div>
+  </div>
+
+</div>
+
+
+
+
+
+
+
+  
+
+
+
+  
   <div class="doc-info">
 
     <p><strong>File:</strong> The Theory of Closed Native Verification Systems.pdf</p>
