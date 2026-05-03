@@ -48,6 +48,12 @@
         linear-gradient(180deg, rgba(0,0,0,0.02), rgba(0,0,0,0.86));
     }
 
+
+
+
+
+
+    
     .stars {
       position: fixed;
       inset: 0;
@@ -287,6 +293,74 @@
       .about-card { padding: 32px 20px; }
       .info-grid { grid-template-columns: 1fr; }
     }
+
+<style>
+
+.timeline-master {
+  max-width: 700px;
+  margin: 60px auto;
+  padding: 20px;
+}
+
+.timeline-title {
+  text-align: center;
+  color: gold;
+  margin-bottom: 15px;
+}
+
+.timeline-intro {
+  text-align: center;
+  font-size: 14px;
+  color: #ccc;
+  margin-bottom: 40px;
+}
+
+/* linea verticale */
+.timeline {
+  position: relative;
+  margin-left: 20px;
+  padding-left: 20px;
+  border-left: 2px solid rgba(255,215,0,0.4);
+}
+
+/* singolo evento */
+.timeline-item {
+  position: relative;
+  margin-bottom: 30px;
+}
+
+/* pallino */
+.timeline-item::before {
+  content: "";
+  position: absolute;
+  left: -30px;
+  top: 5px;
+  width: 10px;
+  height: 10px;
+  background: gold;
+  border-radius: 50%;
+  box-shadow: 0 0 8px gold;
+}
+
+/* data */
+.timeline-date {
+  font-size: 13px;
+  color: gold;
+  display: block;
+  margin-bottom: 5px;
+}
+
+/* testo */
+.timeline-item p {
+  margin: 0;
+  color: white;
+}
+
+</style>
+
+
+
+    
   </style>
 </head><style>
 
@@ -509,7 +583,7 @@ Golden Protocol Nexus is one possible implementation of this theoretical framewo
     
     
     
-    <p><strong>File:</strong> Name File: The_Theory_of_Closed_Native_Verification_Systems_v_Structural_Correction_Release_2.1.pdf</p>
+    <p><strong>File:</strong> Name File: The_Theory_of_Closed_Native_Verification..<br>_Systems_v_Structural_Correction_Release_2.1.pdf</p>
     <p><strong>Size:</strong> 224 kB</p>
 
     <br>
@@ -551,8 +625,70 @@ Golden Protocol Nexus is one possible implementation of this theoretical framewo
               
               
               
-<br><br><br><br>              
-              
+<br><br><br>        
+
+
+
+<div class="timeline-master">
+
+  <h3 class="timeline-title">Development Timeline</h3>
+
+  <p class="timeline-intro">
+    The Nexus protocol preceded the formalization of the CNVS theory,
+    which was later derived as an abstract representation of its structure.
+  </p>
+
+  <div class="timeline">
+
+    <div class="timeline-item">
+      <span class="timeline-date">24 Feb 2026</span>
+      <p>Nexus Founder Paper</p>
+    </div>
+
+    <div class="timeline-item">
+      <span class="timeline-date">03 Mar 2026</span>
+      <p>Synthetic Vision</p>
+    </div>
+
+    <div class="timeline-item">
+      <span class="timeline-date">24 Mar 2026</span>
+      <p>Executive Summary</p>
+    </div>
+
+    <div class="timeline-item">
+      <span class="timeline-date">13 Apr 2026</span>
+      <p>Technical Invariants</p>
+    </div>
+
+    <div class="timeline-item">
+      <span class="timeline-date">18 Apr 2026</span>
+      <p>CNVS Theory v1.0</p>
+    </div>
+
+    <div class="timeline-item">
+      <span class="timeline-date">24–29 Apr 2026</span>
+      <p>System Specifications (Execution, Vault, Allocation)</p>
+    </div>
+
+    <div class="timeline-item">
+      <span class="timeline-date">28 Apr 2026</span>
+      <p>CNVS Theory v2.0</p>
+    </div>
+
+    <div class="timeline-item">
+      <span class="timeline-date">28 Apr 2026</span>
+      <p>CNVS Theory v2.1 (Structural Revision)</p>
+    </div>
+
+  </div>
+
+</div>
+
+
+
+
+<br><br>
+      
               
               
               
