@@ -1,0 +1,85 @@
+import Mathlib
+
+namespace CNVSFeasibilityConstraint
+
+/--
+Modello di fattibilità CNVS.
+
+`mMin` = numero minimo di frammenti critici richiesto
+per soddisfare il target di sicurezza.
+
+`mMax` = numero massimo di frammenti compatibile
+con il vincolo semantico I_F ≥ I_min.
+-/
+structure FeasibilityModel where
+  mMin : Nat
+  mMax : Nat
+
+/--
+La configurazione CNVS è fattibile se il massimo numero
+di frammenti semanticamente ammissibili è almeno pari
+al minimo numero richiesto dalla sicurezza.
+-/
+def Feasible (M : FeasibilityModel) : Prop :=
+  M.mMin ≤ M.mMax
+
+/--
+Se `mMax ≥ mMin`, allora la configurazione è fattibile.
+-/
+theorem feasible_if_capacity_sufficient
+    (M : FeasibilityModel)
+    (h : M.mMin ≤ M.mMax) :
+    Feasible M := by
+  exact h
+
+/--
+Se `mMax < mMin`, allora la configurazione non è fattibile.
+-/
+theorem not_feasible_if_capacity_insufficient
+    (M : FeasibilityModel)
+    (h : M.mMax < M.mMin) :
+    ¬ Feasible M := by
+  intro hF
+  exact Nat.not_lt_of_ge hF h
+
+/--
+Esempio fattibile:
+mMin = 5
+mMax = 8
+-/
+def FeasibleExample : FeasibilityModel where
+  mMin := 5
+  mMax := 8
+
+example :
+    Feasible FeasibleExample := by
+  unfold Feasible FeasibleExample
+  norm_num
+
+/--
+Esempio non fattibile:
+mMin = 10
+mMax = 6
+-/
+def InfeasibleExample : FeasibilityModel where
+  mMin := 10
+  mMax := 6
+
+example :
+    ¬ Feasible InfeasibleExample := by
+  unfold Feasible InfeasibleExample
+  norm_num
+
+/--
+Monotonicità:
+se una configurazione è fattibile con `mMax`,
+allora resta fattibile aumentando la capacità massima.
+-/
+theorem feasibility_monotone_in_capacity
+    (mMin mMax extra : Nat)
+    (h : mMin ≤ mMax) :
+    Feasible { mMin := mMin, mMax := mMax + extra } := by
+  unfold Feasible
+  exact Nat.le_trans h (Nat.le_add_right mMax extra)
+
+end CNVSFeasibilityConstraint
