@@ -1,0 +1,122 @@
+import Mathlib.Data.Real.Basic
+import Mathlib.Tactic
+
+namespace CNVS
+
+/--
+`KVerifier j t` rappresenta la conoscenza accessibile
+al verificatore `j` al tempo `t`.
+
+`IGlobal n` rappresenta l'informazione globale del sistema
+alla scala `n`.
+-/
+structure KnowledgeModel where
+  Verifier : Type
+  Time : Type
+
+  KVerifier : Verifier → Time → ℝ
+  IGlobal : ℕ → ℝ
+
+  Kmax : ℝ
+
+  knowledge_nonnegative :
+    ∀ j t, 0 ≤ KVerifier j t
+
+  global_information_positive :
+    ∀ n, 0 < IGlobal n
+
+  knowledge_bounded :
+    ∀ j t, KVerifier j t ≤ Kmax
+
+/--
+Rapporto di conoscenza:
+quanto della conoscenza globale è accessibile
+al singolo verificatore.
+-/
+noncomputable def knowledgeRatio
+    (M : KnowledgeModel)
+    (j : M.Verifier)
+    (t : M.Time)
+    (n : ℕ) : ℝ :=
+  M.KVerifier j t / M.IGlobal n
+
+/--
+Principio di restrizione della conoscenza, forma finita:
+
+se la conoscenza locale del verificatore è limitata da `Kmax`,
+allora il rapporto tra conoscenza locale e informazione globale
+è limitato da `Kmax / IGlobal n`.
+
+Questo NON è tautologico:
+usa positività del denominatore e monotonia della divisione.
+-/
+theorem knowledge_ratio_bounded_by_global_scale
+    (M : KnowledgeModel)
+    (j : M.Verifier)
+    (t : M.Time)
+    (n : ℕ) :
+    knowledgeRatio M j t n ≤ M.Kmax / M.IGlobal n := by
+  unfold knowledgeRatio
+  exact div_le_div_of_nonneg_right
+    (M.knowledge_bounded j t)
+    (le_of_lt (M.global_information_positive n))
+
+/--
+Se l'informazione globale supera una soglia `B`,
+allora il rapporto di conoscenza è al più `Kmax / B`.
+-/
+theorem knowledge_ratio_bounded_by_threshold
+    (M : KnowledgeModel)
+    (j : M.Verifier)
+    (t : M.Time)
+    (n : ℕ)
+    (B : ℝ)
+    (hBpos : 0 < B)
+    (hB : B ≤ M.IGlobal n)
+    (hKmax : 0 ≤ M.Kmax) :
+    knowledgeRatio M j t n ≤ M.Kmax / B := by
+  calc
+    knowledgeRatio M j t n
+        ≤ M.Kmax / M.IGlobal n :=
+          knowledge_ratio_bounded_by_global_scale M j t n
+    _ ≤ M.Kmax / B := by
+          gcongr
+
+/--
+Esempio concreto:
+
+Un verificatore conosce al massimo 10 unità informative.
+L'informazione globale alla scala n è n + 1.
+
+Allora il rapporto di conoscenza è sempre limitato da:
+
+10 / (n + 1)
+-/
+def ExampleKnowledgeModel : KnowledgeModel where
+  Verifier := Unit
+  Time := Unit
+
+  KVerifier := fun _ _ => 10
+  IGlobal := fun n => (n : ℝ) + 1
+
+  Kmax := 10
+
+  knowledge_nonnegative := by
+    intro j t
+    norm_num
+
+  global_information_positive := by
+    intro n
+    exact by positivity
+
+  knowledge_bounded := by
+    intro j t
+    norm_num
+
+example (n : ℕ) :
+    knowledgeRatio ExampleKnowledgeModel () () n
+      ≤ 10 / ((n : ℝ) + 1) := by
+  exact knowledge_ratio_bounded_by_global_scale
+    ExampleKnowledgeModel () () n
+
+end CNVS

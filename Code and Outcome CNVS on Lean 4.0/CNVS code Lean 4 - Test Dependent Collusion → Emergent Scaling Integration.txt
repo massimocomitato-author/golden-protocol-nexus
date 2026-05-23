@@ -1,0 +1,96 @@
+import Mathlib
+
+open Filter
+open scoped Topology
+
+namespace CNVSDependentScalingIntegration
+
+/--
+Modulo astratto di integrazione:
+
+PRec(n) = probabilità di ricostruzione alla scala n
+pCompPow(n) = bound dipendente pComp(n)^m(n)
+-/
+structure DependentScalingModel where
+  PRec : ℕ → ℝ
+  pCompPow : ℕ → ℝ
+
+  hPRec_nonneg :
+    ∀ n, 0 ≤ PRec n
+
+  hpCompPow_nonneg :
+    ∀ n, 0 ≤ pCompPow n
+
+  hDependentBound :
+    ∀ n, PRec n ≤ pCompPow n
+
+  hpCompPow_tends_zero :
+    Tendsto pCompPow atTop (𝓝 0)
+
+/--
+Teorema integrato:
+
+Se sotto collusione dipendente vale:
+
+PRec(n) ≤ pComp(n)^m(n)
+
+e il bound dipendente tende a zero, allora:
+
+PRec(n) → 0.
+-/
+theorem dependent_collusion_emergent_scaling
+    (M : DependentScalingModel) :
+    Tendsto M.PRec atTop (𝓝 0) := by
+  apply squeeze_zero
+  · exact M.hPRec_nonneg
+  · exact M.hDependentBound
+  · exact M.hpCompPow_tends_zero
+
+/--
+Esempio concreto:
+
+PRec(n) = 1 / (n + 1)
+pCompPow(n) = 1 / (n + 1)
+
+Allora PRec(n) → 0.
+-/
+noncomputable def ExampleDependentScalingModel :
+    DependentScalingModel where
+  PRec := fun n => 1 / ((n : ℝ) + 1)
+  pCompPow := fun n => 1 / ((n : ℝ) + 1)
+
+  hPRec_nonneg := by
+    intro n
+    positivity
+
+  hpCompPow_nonneg := by
+    intro n
+    positivity
+
+  hDependentBound := by
+    intro n
+    rfl
+
+  hpCompPow_tends_zero := by
+    have hden :
+        Tendsto (fun n : ℕ => ((n : ℝ) + 1)) atTop atTop := by
+      have hn :
+          Tendsto (fun n : ℕ => (n : ℝ)) atTop atTop := by
+        exact tendsto_natCast_atTop_atTop
+      exact tendsto_atTop_add_const_right atTop 1 hn
+
+    have hinv :
+        Tendsto
+          (fun n : ℕ => (((n : ℝ) + 1)⁻¹))
+          atTop
+          (𝓝 0) := by
+      exact tendsto_inv_atTop_zero.comp hden
+
+    simpa [one_div] using hinv
+
+example :
+    Tendsto ExampleDependentScalingModel.PRec atTop (𝓝 0) := by
+  exact dependent_collusion_emergent_scaling
+    ExampleDependentScalingModel
+
+end CNVSDependentScalingIntegration
