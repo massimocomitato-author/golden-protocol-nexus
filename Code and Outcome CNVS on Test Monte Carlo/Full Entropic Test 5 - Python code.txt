@@ -1,0 +1,75 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+def cnvs_pure_shannon_entropy(I_G, I_0, lambda_factor=2, trials=2000):
+    """
+    CNVS Thermodynamic Simulator based on Shannon Entropy.
+    No heuristics. No rho_c parameter. Only physical probability.
+    """
+    # Number of unique information blocks required (The Global Veto)
+    M_fragments = int(I_G / I_0)
+    
+    # The physical universe of data: each unique block exists exactly lambda times
+    # We are creating a real array (e.g., [0,0, 1,1, 2,2...]) simulating the network
+    pool_nodi = np.repeat(np.arange(M_fragments), lambda_factor)
+    N_total = len(pool_nodi)
+    
+    q_values = np.linspace(0.01, 0.99, 100)
+    p_success = []
+
+    for q in q_values:
+        wins = 0
+        # Number of nodes the attacker physically manages to capture
+        k_captured = int(q * N_total)
+        
+        for _ in range(trials):
+            # 1. PHYSICAL EXTRACTION (No approximate formulas, pure sampling)
+            captured_nodes = np.random.choice(pool_nodi, size=k_captured, replace=False)
+            
+            # 2. CALCULATION OF POSSESSED INFORMATION
+            unique_captured = len(np.unique(captured_nodes))
+            missing_fragments = M_fragments - unique_captured
+            
+            # 3. RESIDUAL ENTROPY (How many bits of uncertainty remain?)
+            H_res = missing_fragments * I_0
+            
+            # 4. THE INFERENCE ATTEMPT (The Shannon Limit)
+            # The probability of guessing the missing bits is exactly 2^(-H)
+            p_guess = 2.0 ** (-H_res)
+            
+            # 5. WINNING CONDITION (Stochastic based on Shannon)
+            if np.random.random() < p_guess:
+                wins += 1
+                
+        p_success.append(wins / trials)
+        
+    return q_values, p_success, M_fragments
+
+# --- EXECUTION OF THE THERMODYNAMIC TEST ---
+plt.figure(figsize=(11, 7))
+
+# We fix I_G (1000 bits) and lambda (2 copies per node).
+# We demonstrate that by lowering I_0 (pulverizing data), the system becomes impregnable.
+scenarios = [
+    {"I_0": 100, "color": "red",   "label": "Low granularity (I_0 = 100 bits)"},
+    {"I_0": 50,  "color": "orange","label": "Medium granularity (I_0 = 50 bits)"},
+    {"I_0": 20,  "color": "blue",  "label": "High granularity (I_0 = 20 bits)"},
+    {"I_0": 5,   "color": "green", "label": "CNVS Pulverization (I_0 = 5 bits)"}
+]
+
+for sc in scenarios:
+    q_vals, p_vals, M_calc = cnvs_pure_shannon_entropy(I_G=1000, I_0=sc["I_0"], lambda_factor=2)
+    plt.plot(q_vals, p_vals, color=sc["color"], linewidth=2.5, 
+             label=f'{sc["label"]} -> {M_calc} critical fragments')
+
+# BFT line for visual comparison
+plt.axvline(x=0.33, color='black', linestyle='--', alpha=0.7, label='BFT Limit (1/3)')
+
+plt.title("CNVS: Thermodynamic Test of Shannon Entropy (I_G=1000, \u03BB=2)", fontsize=14, fontweight='bold')
+plt.xlabel("Fraction of Network Compromised by Attacker (q)", fontsize=12)
+plt.ylabel("Probability of Total Reconstruction (False Positive)", fontsize=12)
+plt.legend(loc='lower right', fontsize=11)
+plt.grid(True, linestyle=':', alpha=0.7)
+
+plt.tight_layout()
+plt.show()

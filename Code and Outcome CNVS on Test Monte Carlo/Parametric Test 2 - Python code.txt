@@ -1,0 +1,62 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import math
+
+def cnvs_granularity_test(I_G, I_0, lambda_factor=1.2, rho_c=0.01, trials=3000):
+    """
+    Scalability test by reducing I_0 and increasing I_G.
+    I_G: Total Global Information.
+    I_0: Local Semantic Information (the quantum).
+    """
+    # Calculation of required critical fragments (Rounded up)
+    M_fragments = math.ceil(I_G / I_0)
+    
+    # Total nodes in the system with redundancy lambda
+    N_total = int(M_fragments * lambda_factor)
+    
+    q_values = np.linspace(0.01, 0.99, 60)
+    p_success = []
+
+    for q in q_values:
+        wins = 0
+        for _ in range(trials):
+            # 1. Primary Attack
+            primary_compromised = np.random.binomial(N_total, q)
+            
+            # 2. Secondary Attack (Inference/Dependency)
+            remaining_nodes = N_total - primary_compromised
+            p_inference = 1.0 - (1.0 - rho_c)**primary_compromised
+            secondary_compromised = np.random.binomial(remaining_nodes, p_inference)
+            
+            total_compromised = primary_compromised + secondary_compromised
+            
+            # 3. Winning Condition (Global Veto on information masses)
+            if total_compromised >= M_fragments:
+                wins += 1
+                
+        p_success.append(wins / trials)
+        
+    return q_values, p_success, M_fragments
+
+# --- EXECUTION OF GRANULARITY SCENARIOS ---
+plt.figure(figsize=(10, 6))
+
+# Scenarios: We progressively increase I_G and reduce I_0
+scenarios = [
+    {"I_G": 100,  "I_0": 10},  # Low granularity (M = 10)
+    {"I_G": 500,  "I_0": 5},   # Medium granularity (M = 100)
+    {"I_G": 1000, "I_0": 2},   # High granularity (M = 500)
+    {"I_G": 2000, "I_0": 1}    # Extreme granularity (M = 2000)
+]
+
+for sc in scenarios:
+    q_vals, p_vals, M_calc = cnvs_granularity_test(I_G=sc["I_G"], I_0=sc["I_0"])
+    plt.plot(q_vals, p_vals, label=f'I_G={sc["I_G"]}, I_0={sc["I_0"]} (Fragments={M_calc})')
+
+plt.axvline(x=0.33, color='red', linestyle='--', label='Theoretical Limit (1/3)')
+plt.title("CNVS Granularity Test: Effect of I_0 and I_G on Phase Transition")
+plt.xlabel("Fraction of Initially Corrupted Nodes (q)")
+plt.ylabel("Attacker Win Probability (False Positive)")
+plt.legend()
+plt.grid(True)
+plt.show()
