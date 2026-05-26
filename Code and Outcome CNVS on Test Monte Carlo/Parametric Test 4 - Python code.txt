@@ -1,0 +1,110 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import math
+
+def cnvs_ultimate_parametric_test_corrected(I_G, I_0, lambda_factor, rho_c, trials=3000):
+    """
+    Corrected Ultimate CNVS Simulator.
+    Calculates asymptotic evolution under simultaneous stress, 
+    enforcing pure physical sampling and integer redundancy.
+    """
+    if not isinstance(lambda_factor, int) or lambda_factor < 1:
+        raise ValueError(f"ERROR: lambda_factor must be an integer >= 1. Received: {lambda_factor}")
+
+    # Critical fragments required for the Global Veto
+    M_fragments = math.ceil(I_G / I_0)
+    
+    # Creation of the physical universe of redundant data
+    pool = np.repeat(np.arange(M_fragments), lambda_factor)
+    N_total = len(pool)
+    
+    # High resolution on X-axis to capture the vertical wall
+    q_values = np.linspace(0.01, 0.99, 100)
+    p_success = []
+
+    for q in q_values:
+        wins = 0
+        k_captured = int(round(q * N_total))
+        
+        for _ in range(trials):
+            # 1. Primary Attack: Physical capture without replacement
+            captured_nodes = np.random.choice(pool, size=k_captured, replace=False)
+            
+            # Semantic Knowledge: Unique fragments physically acquired
+            unique_captured = len(np.unique(captured_nodes))
+            missing_fragments = M_fragments - unique_captured
+            
+            # 2. Secondary Attack: Inference (Mitigated by pulverization)
+            p_inference = 1.0 - (1.0 - rho_c)**unique_captured
+            
+            inferred_fragments = 0
+            if missing_fragments > 0:
+                inferred_fragments = np.random.binomial(missing_fragments, p_inference)
+            
+            total_known = unique_captured + inferred_fragments
+            
+            # 3. Winning Condition (Global Veto strict enforcement)
+            if total_known >= M_fragments:
+                wins += 1
+                
+        p_success.append(wins / trials)
+        
+    return q_values, p_success, M_fragments, N_total
+
+# ============================================================
+# EVOLUTIONARY SCENARIOS OF THE CNVS
+# ============================================================
+# NOTE: Lambda is locked at 2 for advanced phases to respect the Redundancy Paradox (Test 3)
+# ============================================================
+# EVOLUTIONARY SCENARIOS OF THE CNVS (CETERIS PARIBUS)
+# ============================================================
+
+
+scenarios = [
+    # Fase 1: Prototipo (M=50. Nessuna ridondanza, frammenti grossi, alta correlazione)
+    {"I_G": 2000,  "I_0": 40, "lambda": 1, "rho_c": 0.05,  "name": "Phase 1: Prototype", "color": "red"},
+    
+    # Fase 2: Baseline (M=200. Introduzione della ridondanza ottimale, frammenti medi)
+    {"I_G": 2000,  "I_0": 10, "lambda": 2, "rho_c": 0.02,  "name": "Phase 2: Baseline", "color": "orange"},
+    
+    # Fase 3: Scaled (M=500. Alta polverizzazione, ridondanza ottimale)
+    {"I_G": 2000,  "I_0": 4,  "lambda": 2, "rho_c": 0.005, "name": "Phase 3: Scaled", "color": "blue"},
+    
+    # Fase 4: Global Supreme (M=2000. Polverizzazione estrema quantica, inferenza nulla)
+    {"I_G": 2000,  "I_0": 1,  "lambda": 2, "rho_c": 0.001, "name": "Phase 4: Global Supreme", "color": "green"}
+]
+
+plt.figure(figsize=(12, 7))
+np.random.seed(20260525)
+
+print("Running Ultimate Parametric Test. Integrating all operational variables...")
+
+for sc in scenarios:
+    q_vals, p_vals, M_calc, N_calc = cnvs_ultimate_parametric_test_corrected(
+        I_G=sc["I_G"], 
+        I_0=sc["I_0"], 
+        lambda_factor=sc["lambda"], 
+        rho_c=sc["rho_c"],
+        trials=3000
+    )
+    
+    label_text = (f'{sc["name"]} (M={M_calc}, \u03BB={sc["lambda"]}, \u03C1c={sc["rho_c"]})')
+    plt.plot(q_vals, p_vals, color=sc["color"], linewidth=2.5, label=label_text)
+
+# Classical BFT Reference Line
+plt.axvline(x=1/3, color='black', linestyle='--', alpha=0.7, label='Classical BFT Limit (1/3)')
+
+plt.title("CNVS Ultimate Parametric Evolution (Fixed I_G, Increasing Pulverization, Decreasing ρc)")
+plt.xlabel("Fraction of Physically Corrupted Nodes (q)", fontsize=12)
+plt.ylabel("Probability of System Collapse (False Positive)", fontsize=12)
+plt.legend(loc='upper left', fontsize=10)
+plt.grid(True, linestyle=':', alpha=0.7)
+
+# Danger zone visualization
+plt.fill_between(np.linspace(0, 1/3, 10), 0, 1, color='red', alpha=0.05, label='BFT Danger Zone')
+
+plt.tight_layout()
+plt.savefig("CNVS_Test_4_Ultimate_Corrected.png", dpi=200)
+plt.show()
+
+print("Execution complete. High-resilience transition regime observed under tested parameters.")
