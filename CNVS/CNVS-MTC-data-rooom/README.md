@@ -21,6 +21,8 @@ The MTC suite is designed to evaluate the operational behavior of CNVS under exp
 - Global Veto;
 - executable separation between local admissibility and global validity.
 
+  The suite also includes a dedicated repository of engineerable prototypes (.../python/CNVS Engineering Hardening Tests/).
+
 The tests do **not** replace the formal proof of the CNVS theory and do **not** establish unconditional security. They provide numerical, projective, and executable support under the stated CNVS assumptions.
 
 ---
@@ -40,29 +42,33 @@ cnvs-mtc-data-room/
 ├── reports/
 │   └── Report_Monte_Carlo_ENG.pdf
 │
-├── python/
+├── python/projective_tests/
 │   ├── test_01_statistical_projection_min_entropy.py
 │   ├── test_02_dynamic_entropy_erosion.py
 │   ├── test_03_slashing_expected_value.py
 │   ├── test_04_topological_refresh_sybil_purge.py
 │   ├── test_05_mmin_design_formula.py
+│
+├── python/empirical_tests/
 │   ├── test_09_structural_poc.py
 │   ├── test_10_full_structural_semantic_model.py
 │   └── test_11_fragmentation_sensitivity.py
 │
-├── html-js/
+├── html-js/interactive_tests/
 │   ├── test_06_expected_value_dashboard.html
 │   ├── test_07_reconstruction_decay_dashboard.html
 │   └── test_08_dynamic_entropy_erosion_dashboard.html
 │
-├── figures/
+├── outcome_tests/
 │   ├── test_01/
 │   ├── test_02/
 │   ├── test_03/
 │   ├── test_04/
 │   ├── test_05/
 │   ├── test_10/
-│   └── test_11/
+│   ├── test_11/
+│   ├── test_12/
+│   └── test_13/
 │
 ├── outputs/
 │   ├── logs/
