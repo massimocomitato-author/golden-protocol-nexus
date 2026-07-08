@@ -54,6 +54,10 @@ cnvs-mtc-data-room/
 │   ├── test_10_full_structural_semantic_model.py
 │   └── test_11_fragmentation_sensitivity.py
 │
+├── python/protocol_engineering_tests/
+│   ├── test_12_engineering_hardened_256bit_fragmentation.py
+│   ├── test_13_engineering_hardened_256bit_full_strs.py
+│
 ├── html-js/interactive_tests/
 │   ├── test_06_expected_value_dashboard.html
 │   ├── test_07_reconstruction_decay_dashboard.html
