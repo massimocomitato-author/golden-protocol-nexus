@@ -6,7 +6,7 @@ Copyright © 2026 Massimo Comitato.
 
 The Python scripts, JavaScript dashboards, HTML files, executable environments, simulation engines, test utilities, generated code artifacts, and software components contained in this repository are licensed under a non-commercial software license model.
 
-Recommended software license identifier:
+Software license identifier:
 
 ```text
 PolyForm Noncommercial License 1.0.0
@@ -107,9 +107,9 @@ Massimo Comitato
 
 ---
 
-## Recommended Source File Header
+# The header of the source files contains the following reference to the specific License (if the following reference is not included, the Legal clause still applies, which binds all contents of this Repository to Non-Commercial Use without the Author's permission):
 
-For Python files:
+In Python files:
 
 ```python
 # ==============================================================================
@@ -126,7 +126,7 @@ For Python files:
 # ==============================================================================
 ```
 
-For JavaScript files:
+In JavaScript files:
 
 ```javascript
 /*
@@ -145,7 +145,7 @@ SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 */
 ```
 
-For HTML files:
+In HTML files:
 
 ```html
 <!--
