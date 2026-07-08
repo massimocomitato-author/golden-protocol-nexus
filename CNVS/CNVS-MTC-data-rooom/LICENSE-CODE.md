@@ -107,7 +107,7 @@ Massimo Comitato
 
 ---
 
-# The header of the source files contains the following reference to the specific License (if the following reference is not included, the Legal clause still applies, which binds all contents of this Repository to Non-Commercial Use without the Author's permission):
+<span style="font-size: 0.8em; font-weight: bold;"> The header of the source files contains the following reference to the specific License (if the following reference is not included, the Legal clause still applies, which binds all contents of this Repository to Non-Commercial Use without the Author's permission): </ span>
 
 In Python files:
 
