@@ -25,7 +25,7 @@ The tests do **not** replace the formal proof of the CNVS theory and do **not** 
 
 ---
 
-## Recommended Repository Structure
+## Repository Structure
 
 ```text
 cnvs-mtc-data-room/
@@ -87,7 +87,7 @@ cnvs-mtc-data-room/
 reports/Report_Monte_Carlo_ENG.pdf
 ```
 
-Recommended SHA-256 entry:
+SHA-256 entry:
 
 ```text
 SHA256: f39f29ef36b744aba43e619ab826496402d6e480ef2e6b15e8d1c045ce14957f
