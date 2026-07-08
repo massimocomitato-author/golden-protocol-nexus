@@ -4,7 +4,7 @@
 
 Copyright © 2026 Massimo Comitato.
 
-**<sub> The Python scripts, JavaScript dashboards, HTML files, executable environments, simulation engines, test utilities, generated code artifacts, and software components contained in this repository are licensed under a non-commercial software license model. </sub>**
+<sub> The Python scripts, JavaScript dashboards, HTML files, executable environments, simulation engines, test utilities, generated code artifacts, and software components contained in this repository are licensed under a non-commercial software license model. </sub>
 
 Software license identifier:
 
