@@ -27,7 +27,7 @@ AI assistance may have been used for:
 - graphical caption refinement;
 - legal-notice drafting support.
 
-AI assistance was not the source of the CNVS theory, the CNVS conceptual architecture, the mathematical framework, the Global Veto principle, the hidden invariant binding model, the decomposition logic, the MTC test design, or the scientific claims.
+AI assistance was not the source of the CNVS theory, the CNVS conceptual architecture, the mathematical framework, the global veto principle, the hidden invariant link model, the decomposition logic, the lemmas, theorems, the choice of application of specific mathematical tools (Hoeffding, Chernoff, Shannon, etc.), or the design of the MTC test or scientific claims.
 
 ---
 
