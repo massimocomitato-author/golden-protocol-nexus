@@ -92,18 +92,18 @@ CURRENT
 
 ## Figures
 
-Figures are stored under:
+Outcomes are stored under:
 
 ```text
-figures/test_01/
-figures/test_02/
-figures/test_03/
-figures/test_04/
-figures/test_05/
-figures/test_10/
-figures/test_11/
-figures/test_12/
-figures/test_13/
+outcomes/test_01/
+outcomes/test_02/
+outcomes/test_03/
+outcomes/test_04/
+outcomes/test_05/
+outcomes/test_10/
+outcomes/test_11/
+outcomes/test_12/
+outcomes/test_13/
 ```
 
 Output formats:
