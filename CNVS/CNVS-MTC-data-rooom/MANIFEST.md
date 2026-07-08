@@ -95,15 +95,15 @@ CURRENT
 Outcomes are stored under:
 
 ```text
-outcomes/test_01/
-outcomes/test_02/
-outcomes/test_03/
-outcomes/test_04/
-outcomes/test_05/
-outcomes/test_10/
-outcomes/test_11/
-outcomes/test_12/
-outcomes/test_13/
+outcomes_tests/test_01/
+outcomes_tests/test_02/
+outcomes_tests/test_03/
+outcomes_tests/test_04/
+outcomes_tests/test_05/
+outcomes_tests/test_10/
+outcomes_tests/test_11/
+outcomes_tests/test_12/
+outcomes_tests/test_13/
 ```
 
 Output formats:
