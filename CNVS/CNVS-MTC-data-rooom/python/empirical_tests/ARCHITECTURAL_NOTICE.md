@@ -1,6 +1,6 @@
-# Architectural Scope and Simplification Notice
+# Notice on Architectural Scope and Empirical Test Simplification
 
-## 1. The MTC Suite Simplification Boundary
+## 1. The MTC Suite Simplification Boundary (Empirical Tests)
 
 The executable environments and Monte Carlo Test Suite (MTC) provided in this repository represent a conservative and simplified model of the **Closed Native Verification Systems (CNVS)** framework.
 
