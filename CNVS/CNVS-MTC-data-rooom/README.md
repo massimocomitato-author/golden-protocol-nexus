@@ -151,7 +151,6 @@ Please cite this repository and the MTC Technical Report as:
 Comitato, M. (2026). CNVS MTC Data Room: Monte Carlo Test Suite and Executable Evaluation Environment for Closed Native Verification Systems. Version 3.0.
 ```
 
-A `CITATION.cff` file should be added for GitHub citation metadata.
 
 ---
 
