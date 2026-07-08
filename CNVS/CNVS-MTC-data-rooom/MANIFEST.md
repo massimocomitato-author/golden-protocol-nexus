@@ -65,7 +65,7 @@ CURRENT
 
 ## Current Python Test Files
 
-| Test | Recommended Filename | Status |
+| Test | Filename | Status |
 |---|---|---|
 | Test 1 | `test_01_statistical_projection_min_entropy.py` | Current |
 | Test 2 | `test_02_dynamic_entropy_erosion.py` | Current |
@@ -80,7 +80,7 @@ CURRENT
 
 ## Current HTML / JavaScript Dashboards
 
-| Test | Recommended Filename | Status |
+| Test | Filename | Status |
 |---|---|---|
 | Test 6 | `test_06_expected_value_dashboard.html` | Current |
 | Test 7 | `test_07_reconstruction_decay_dashboard.html` | Current |
@@ -90,7 +90,7 @@ CURRENT
 
 ## Figures
 
-Figures should be stored under:
+Figures are stored under:
 
 ```text
 figures/test_01/
@@ -102,7 +102,7 @@ figures/test_10/
 figures/test_11/
 ```
 
-Recommended output formats:
+Output formats:
 
 ```text
 .png
@@ -114,14 +114,14 @@ Recommended output formats:
 
 ## Outputs
 
-Raw logs and numerical outputs should be stored under:
+Raw logs and numerical outputs are stored under:
 
 ```text
 outputs/logs/
 outputs/raw_results/
 ```
 
-Recommended file types:
+File types:
 
 ```text
 .txt
@@ -133,13 +133,13 @@ Recommended file types:
 
 ## Provenance
 
-Provenance files should be stored under:
+Provenance files are stored under:
 
 ```text
 provenance/
 ```
 
-Recommended contents:
+Contents:
 
 | File | Purpose |
 |---|---|
@@ -151,9 +151,7 @@ Recommended contents:
 
 ## Archive Policy
 
-Deprecated, obsolete, tautological, exploratory, or superseded materials should not remain in the repository root.
-
-They should be moved to:
+Deprecated, obsolete, tautological, exploratory, or superseded materials are archived in the dedicated repository directories:
 
 ```text
 archive/deprecated_tests/
@@ -161,7 +159,6 @@ archive/old_reports/
 archive/exploratory_versions/
 ```
 
-Each archive folder should contain a `README_ARCHIVE.md` stating:
 
 ```text
 These files are preserved only for historical and provenance purposes.
@@ -190,11 +187,7 @@ Commercial use requires prior written authorization from the author.
 
 ---
 
-## Integrity Notes
-
-The SHA-256 hash above should be recomputed after every modification of the PDF or any source file.
-
-Suggested command:
+Command:
 
 ```bash
 sha256sum reports/Report_Monte_Carlo_ENG.pdf
