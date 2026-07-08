@@ -51,7 +51,8 @@ CURRENT
 | `AI_USE_STATEMENT.md` | AI assistance disclosure | Current |
 | `CHANGELOG.md` | Version history | Current |
 | `MANIFEST.md` | Artifact inventory and provenance index | Current |
-| `CITATION.cff` | Citation metadata | To be added |
+| `ENGINEERING_LIMITATIONS.md` | Model Limitations | Current |
+| `CITATION.cff` | Citation metadata | Current |
 
 ---
 
