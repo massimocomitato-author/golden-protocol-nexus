@@ -63,7 +63,7 @@ cnvs-mtc-data-room/
 │   ├── test_07_reconstruction_decay_dashboard.html
 │   └── test_08_dynamic_entropy_erosion_dashboard.html
 │
-├── outcome_tests/
+├── outcomes_tests/
 │   ├── test_01/
 │   ├── test_02/
 │   ├── test_03/
