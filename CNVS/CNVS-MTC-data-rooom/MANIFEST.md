@@ -75,6 +75,8 @@ CURRENT
 | Test 9 | `test_09_structural_poc.py` | Current |
 | Test 10 | `test_10_full_structural_semantic_model.py` | Current |
 | Test 11 | `test_11_fragmentation_sensitivity.py` | Current |
+| Test 12 | `test_12_engineering_hardened_256bit_fragmentation.py` | Current |
+| Test 13 | `test_13_engineering_hardened_256bit_full_strs.py` | Current |
 
 ---
 
@@ -100,6 +102,8 @@ figures/test_04/
 figures/test_05/
 figures/test_10/
 figures/test_11/
+figures/test_12/
+figures/test_13/
 ```
 
 Output formats:
