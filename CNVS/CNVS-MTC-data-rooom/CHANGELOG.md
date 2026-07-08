@@ -17,15 +17,20 @@ All notable changes to the CNVS MTC Data Room are documented in this file.
   - `AI_USE_STATEMENT.md`
   - `CHANGELOG.md`
   - `MANIFEST.md`
-- Suggested repository folders:
+  - `ENGINEERING_LIMITATIONS.md`
+- repository folders:
   - `reports/`
   - `python/`
+  - `python/projective_tests/`
+  - `python/empirical_tests/`
+  - `python/protocol_engineering_tests/`
   - `html-js/`
+  - `html-js/interactive_tests`
   - `figures/`
   - `outputs/`
   - `provenance/`
   - `archive/`
-- Licensing separation between documentation and code.
+- Also enabled license separation between documentation and code (two different legal protection Licenses).
 - AI use disclosure.
 - Provenance and timestamping structure.
 
@@ -56,7 +61,7 @@ All notable changes to the CNVS MTC Data Room are documented in this file.
 
 ## [0.x] - Historical / Deprecated
 
-Earlier exploratory versions, obsolete Monte Carlo tests, preliminary drafts, and superseded reports should be placed under:
+Previous exploratory builds, obsolete Monte Carlo tests, preliminary drafts, and completed reports are stored in the section:
 
 ```text
 archive/
