@@ -20,8 +20,8 @@ from dataclasses import dataclass
 
 
 # ==============================================================================
-# CNVS TEST 11:
-# EXECUTABLE FRAGMENTATION SENSITIVITY TEST
+# Test Name: Test 11 - Executable Fragmentation Sensitivity under Hidden Invariant Binding
+# filename = "test_11_fragmentation_sensitivity.py"
 #
 # Purpose:
 #   This test extends the logic of CNVS Test 10.
