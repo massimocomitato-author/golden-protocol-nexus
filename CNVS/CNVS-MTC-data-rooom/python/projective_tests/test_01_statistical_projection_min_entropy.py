@@ -19,8 +19,8 @@ import matplotlib.pyplot as plt
 # CNVS THEOREM 4 STATISTICAL PROJECTION:
 # DEPENDENT COLLUSION AND RESIDUAL MIN-ENTROPY
 #
-#  Test Name: Test 1: Statistical Projection of Systemic Reconstruction under Dependent Collusion (Min-Entropy Variation).
-#
+#  Test Name: Test 1 - Statistical Projection of Systemic Reconstruction under Dependent Collusion (Min-Entropy Variation).
+#  filename = "test_01_statistical_projection_min_entropy.py"
 #
 #
 # PURPOSE:
