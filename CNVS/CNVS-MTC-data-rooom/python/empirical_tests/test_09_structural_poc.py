@@ -14,11 +14,17 @@
 import hashlib
 import json
 import secrets
+from pathlib import Path
 from dataclasses import dataclass
 from typing import Dict, Any, Callable, List
 
+import numpy as np
+import matplotlib.pyplot as plt
+
+
 # ==============================================================================
-# Test Name: Test 9 - Structural Proof-of-Concept (Decoupled Pedagogical Validation Model).
+#
+# Test Name: Test 9 - Structural Proof-of-Concept (Decoupled Pedagogical Validation Model)
 # filename = "test_09_structural_poc.py"
 #
 # PURPOSE:
@@ -45,6 +51,7 @@ from typing import Dict, Any, Callable, List
 # instantiated invariant family C_int = <theta_C, R_int, binding>.
 # ==============================================================================
 
+
 # ==============================================================================
 # DATA STRUCTURES
 # ==============================================================================
@@ -53,18 +60,20 @@ from typing import Dict, Any, Callable, List
 class TerminalFragment:
     """
     Internal representation of a terminal fragment.
-    Belongs exclusively to the private global state. Local verifiers do not 
-    receive the semantic_key or the true_value.
+    Belongs exclusively to the private global state.
+    Local verifiers do not receive the semantic_key or the true_value.
     """
     semantic_key: str
     selector: str
     typ: type
     true_value: Any
 
+
 @dataclass(frozen=True)
 class LocalEvidence:
     """
     Evidence submitted by a local verifier.
+
     The identity_proof authenticates the node and the current instance/epoch label,
     NOT the observed_value. A compromised node may submit a locally admissible
     false value while carrying a valid identity proof.
@@ -79,32 +88,39 @@ class LocalEvidence:
     identity_proof: str
     epoch: str
 
+
 @dataclass(frozen=True)
 class PublicInvariantCategory:
     """
     C_pub: Public invariant category.
-    Granted to the adversary in the ordinary threat model. It reveals the class 
-    of constraints (e.g., "structural-semantic grids") but hides the instantiated 
-    parameters, internal topology, and exact binding.
+
+    Granted to the adversary in the ordinary threat model. It reveals the class
+    of constraints but hides the instantiated parameters, internal topology,
+    and exact binding.
     """
     name: str
     description: str
+
 
 @dataclass(frozen=True)
 class InternalInvariantParameters:
     """
     theta_C: Hidden internal parameters of the instantiated invariant.
-    In this pedagogical model, it is abstracted as a simple scale_factor and target.
+
+    In this pedagogical model, theta_C is abstracted as a simple scale_factor
+    and target.
     """
     scale_factor: int
     target: int
     description: str
 
+
 @dataclass
 class CNVS_Semantic_State:
     """
     Private global CNVS state.
-    Contains the full C_int = <theta_C, R_int, binding>. 
+
+    Contains the full C_int = <theta_C, R_int, binding>.
     The adversary does not have access to this structure.
     """
     fragments: Dict[str, TerminalFragment]
@@ -115,6 +131,7 @@ class CNVS_Semantic_State:
     theta_C: InternalInvariantParameters
     hidden_relation_binding: Dict[str, str]
 
+
 # ==============================================================================
 # CRYPTOGRAPHIC UTILITIES
 # ==============================================================================
@@ -122,13 +139,18 @@ class CNVS_Semantic_State:
 def sha256_text(x: str) -> str:
     return hashlib.sha256(x.encode("utf-8")).hexdigest()
 
+
 def make_selector(semantic_key: str, salt: str) -> str:
-    """Creates an opaque terminal selector, masking the semantic key."""
+    """
+    Creates an opaque terminal selector, masking the semantic key.
+    """
     return "tau_" + sha256_text(f"{semantic_key}|{salt}")[:12]
+
 
 def make_identity_hash(salt: str, selector: str, epoch: str) -> str:
     """
     Identity/instance commitment.
+
     Intentionally excludes the observed value to enforce the separation between
     authentication and global semantic truth.
 
@@ -138,11 +160,15 @@ def make_identity_hash(salt: str, selector: str, epoch: str) -> str:
     """
     return sha256_text(f"salt={salt}|selector={selector}|epoch={epoch}")
 
+
 # ==============================================================================
-# ENVIRONMENT GENERATION (Trusted Setup)
+# ENVIRONMENT GENERATION — TRUSTED SETUP
 # ==============================================================================
 
-def build_execution_environment(payload: Dict[str, Any], epoch: str) -> CNVS_Semantic_State:
+def build_execution_environment(
+    payload: Dict[str, Any],
+    epoch: str
+) -> CNVS_Semantic_State:
     """
     Converts a standard payload into a private CNVS semantic state.
     """
@@ -150,7 +176,7 @@ def build_execution_environment(payload: Dict[str, Any], epoch: str) -> CNVS_Sem
     hidden_salts: Dict[str, str] = {}
     identity_hashes: Dict[str, str] = {}
 
-    # 1. Terminal decomposition
+    # 1. Terminal decomposition.
     for key, value in payload.items():
         salt = secrets.token_hex(16)
         selector = make_selector(key, salt)
@@ -161,26 +187,34 @@ def build_execution_environment(payload: Dict[str, Any], epoch: str) -> CNVS_Sem
             typ=type(value),
             true_value=value
         )
+
         fragments[selector] = frag
         hidden_salts[selector] = salt
         identity_hashes[selector] = make_identity_hash(salt, selector, epoch)
 
-    # 2. Public category C_pub
+    # 2. Public invariant category C_pub.
     C_pub = PublicInvariantCategory(
         name="structural_semantic_consistency",
         description="Public view: the state is governed by hidden geometric constraints."
     )
 
-    # 3. Hidden internal binding (R_int surrogate)
-    floor_selector = next(s for s, f in fragments.items() if f.semantic_key == "Piano")
-    area_selector = next(s for s, f in fragments.items() if f.semantic_key == "Metratura")
+    # 3. Hidden internal binding, used here as an R_int surrogate.
+    floor_selector = next(
+        s for s, f in fragments.items()
+        if f.semantic_key == "Piano"
+    )
+
+    area_selector = next(
+        s for s, f in fragments.items()
+        if f.semantic_key == "Metratura"
+    )
 
     hidden_relation_binding = {
         "floor_role": floor_selector,
         "area_role": area_selector
     }
 
-    # 4. Hidden instantiated parameters (theta_C surrogate)
+    # 4. Hidden instantiated parameters, used here as theta_C surrogate.
     scale_factor = 40
     target = (payload["Piano"] * scale_factor) - payload["Metratura"]
 
@@ -200,18 +234,28 @@ def build_execution_environment(payload: Dict[str, Any], epoch: str) -> CNVS_Sem
         hidden_relation_binding=hidden_relation_binding
     )
 
+
 # ==============================================================================
-# LOCAL VALIDATION (V_L) & EVIDENCE EMISSION
+# LOCAL VALIDATION V_L AND EVIDENCE EMISSION
 # ==============================================================================
 
-def V_L(state: CNVS_Semantic_State, selector: str, observed_value: Any) -> bool:
+def V_L(
+    state: CNVS_Semantic_State,
+    selector: str,
+    observed_value: Any
+) -> bool:
     """
-    Weak local validation. Verifies structure and type, but remains semantically blind.
+    Weak local validation.
+
+    Verifies only structure and type.
+    It remains semantically blind.
     """
     if selector not in state.fragments:
         return False
+
     expected_type = state.fragments[selector].typ
     return isinstance(observed_value, expected_type)
+
 
 def emit_evidence(
     state: CNVS_Semantic_State,
@@ -222,7 +266,9 @@ def emit_evidence(
     epoch_override: str | None = None
 ) -> LocalEvidence:
     """
-    Test helper: simulates emission of evidence by an honest or compromised node.
+    Test helper.
+
+    Simulates emission of evidence by an honest or compromised node.
     """
     epoch = epoch_override if epoch_override is not None else state.epoch
     local_ok = V_L(state, selector, observed_value)
@@ -240,12 +286,18 @@ def emit_evidence(
         epoch=epoch
     )
 
+
 # ==============================================================================
-# GLOBAL VETO (V_G)
+# GLOBAL VETO V_G
 # ==============================================================================
 
-def Cons_R(state: CNVS_Semantic_State, evidence: Dict[str, LocalEvidence]) -> bool:
-    """Barrier 1: Relational/Topological completeness."""
+def Cons_R(
+    state: CNVS_Semantic_State,
+    evidence: Dict[str, LocalEvidence]
+) -> bool:
+    """
+    Barrier 1: Relational / topological completeness.
+    """
     expected_selectors = set(state.fragments.keys())
     received_selectors = set(evidence.keys())
 
@@ -253,29 +305,55 @@ def Cons_R(state: CNVS_Semantic_State, evidence: Dict[str, LocalEvidence]) -> bo
         return False
 
     for selector, ev in evidence.items():
-        if ev.selector != selector or not ev.local_admissible:
+        if ev.selector != selector:
             return False
+
+        if not ev.local_admissible:
+            return False
+
     return True
 
-def Verify_Identity(state: CNVS_Semantic_State, evidence: Dict[str, LocalEvidence]) -> bool:
-    """
-    Barrier 2: Identity/instance authentication.
 
-    This toy model keeps an epoch field as a simplified replay-protection proxy,
-    comparable to current application-layer session or epoch checks. This is not
-    the central CNVS defense. In the full model, a replayed view fails because
-    the next verification instance refreshes selectors, binding, topology R_int,
-    and the instantiated invariant family C_int.
+def Verify_Identity(
+    state: CNVS_Semantic_State,
+    evidence: Dict[str, LocalEvidence]
+) -> bool:
+    """
+    Barrier 2: Identity / instance authentication.
+
+    This toy model keeps an epoch field as a simplified replay-protection proxy.
+    This is not the central CNVS defense.
+
+    In the full CNVS model, a replayed view fails because the next verification
+    instance refreshes selectors, binding, topology R_int, and the instantiated
+    invariant family C_int.
     """
     for selector, ev in evidence.items():
-        if selector not in state.hidden_salts or ev.epoch != state.epoch:
+        if selector not in state.hidden_salts:
             return False
+
+        if ev.epoch != state.epoch:
+            return False
+
         if ev.identity_proof != state.identity_hashes[selector]:
             return False
+
     return True
 
-def c_1_geometric_consistency(state: CNVS_Semantic_State, evidence: Dict[str, LocalEvidence]) -> bool:
-    """Barrier 3: Hidden constraint evaluation."""
+
+def c_1_geometric_consistency(
+    state: CNVS_Semantic_State,
+    evidence: Dict[str, LocalEvidence]
+) -> bool:
+    """
+    Barrier 3: Hidden constraint evaluation.
+
+    Pedagogical hidden invariant:
+
+        candidate_result = Piano * scale_factor - Metratura
+
+    The candidate must match the hidden target.
+    """
     floor_selector = state.hidden_relation_binding["floor_role"]
     area_selector = state.hidden_relation_binding["area_role"]
 
@@ -283,49 +361,90 @@ def c_1_geometric_consistency(state: CNVS_Semantic_State, evidence: Dict[str, Lo
     area_val = evidence[area_selector].observed_value
 
     candidate_result = (floor_val * state.theta_C.scale_factor) - area_val
+
     return candidate_result == state.theta_C.target
 
-def Inv_C(state: CNVS_Semantic_State, evidence: Dict[str, LocalEvidence]) -> bool:
-    """Evaluates the full invariant family C."""
-    hidden_constraints: List[Callable[[CNVS_Semantic_State, Dict[str, LocalEvidence]], bool]] = [
+
+def Inv_C(
+    state: CNVS_Semantic_State,
+    evidence: Dict[str, LocalEvidence]
+) -> bool:
+    """
+    Evaluates the hidden invariant family C.
+    """
+    hidden_constraints: List[
+        Callable[[CNVS_Semantic_State, Dict[str, LocalEvidence]], bool]
+    ] = [
         c_1_geometric_consistency
     ]
+
     return all(c_i(state, evidence) for c_i in hidden_constraints)
 
-def VG(state: CNVS_Semantic_State, evidence: Dict[str, LocalEvidence]) -> str:
-    """Decoupled Global Veto V_G execution."""
+
+def VG(
+    state: CNVS_Semantic_State,
+    evidence: Dict[str, LocalEvidence]
+) -> str:
+    """
+    Decoupled Global Veto V_G execution.
+    """
     if not Cons_R(state, evidence):
         return "VETO: Relational/Topological coherence failed."
+
     if not Verify_Identity(state, evidence):
         return "VETO: Identity/instance authentication failed."
+
     if not Inv_C(state, evidence):
         return "VETO: Hidden invariant family C_int failed."
 
     return "ACCEPTED: Global state validated."
 
+
 # ==============================================================================
 # INTROSPECTION HELPERS
 # ==============================================================================
 
-def get_selector_by_semantic_key(state: CNVS_Semantic_State, semantic_key: str) -> str:
-    return next(s for s, f in state.fragments.items() if f.semantic_key == semantic_key)
+def get_selector_by_semantic_key(
+    state: CNVS_Semantic_State,
+    semantic_key: str
+) -> str:
+    return next(
+        s for s, f in state.fragments.items()
+        if f.semantic_key == semantic_key
+    )
+
 
 def print_public_adversary_view(state: CNVS_Semantic_State) -> None:
     public_view = {
         "epoch": state.epoch,
         "public_selectors": list(state.fragments.keys()),
         "C_pub_granted": state.C_pub.name,
-        "C_int_hidden": ["theta_C", "R_int", "hidden_relation_binding", "true_values", "salts"]
+        "C_int_hidden": [
+            "theta_C",
+            "R_int",
+            "hidden_relation_binding",
+            "true_values",
+            "salts"
+        ]
     }
+
     print(json.dumps(public_view, indent=2, ensure_ascii=False))
 
+
 # ==============================================================================
-# TEST SUITE
+# TEST SUITE — TERMINAL OUTPUT
 # ==============================================================================
 
 def run_scenarios() -> None:
     print("--- CNVS STRUCTURAL PROOF-OF-CONCEPT INITIALIZATION ---")
-    payload = {"Proprietario": "Enzo", "Città": "Milano", "Piano": 3, "Metratura": 120}
+
+    payload = {
+        "Proprietario": "Enzo",
+        "Città": "Milano",
+        "Piano": 3,
+        "Metratura": 120
+    }
+
     state = build_execution_environment(payload, epoch="time_zero")
 
     sel_owner = get_selector_by_semantic_key(state, "Proprietario")
@@ -368,6 +487,7 @@ def run_scenarios() -> None:
     print("application-layer systems. It is NOT the central CNVS refresh model.")
     print("In full CNVS, a replayed view fails because the next instance refreshes")
     print("selectors, binding, topology R_int, and the invariant family C_int.")
+
     ev_4 = {
         sel_owner: emit_evidence(state, sel_owner, "Enzo", epoch_override="wrong_epoch"),
         sel_city: emit_evidence(state, sel_city, "Milano", epoch_override="wrong_epoch"),
@@ -386,5 +506,256 @@ def run_scenarios() -> None:
     }
     print("Result:", VG(state, ev_5))
 
+
+# ==============================================================================
+# TEST 9 PLOT DATA COLLECTION
+# ==============================================================================
+
+def collect_test09_plot_data() -> List[Dict[str, Any]]:
+    """
+    Collect structured scenario outcomes for Test 9 plotting.
+
+    This function re-executes the five pedagogical scenarios and records:
+      - local admissibility rate;
+      - Cons_R outcome;
+      - identity verification outcome;
+      - Inv_C outcome;
+      - final V_G acceptance outcome.
+
+    The plots are explanatory only.
+    They do not alter the validation logic.
+    """
+
+    payload = {
+        "Proprietario": "Enzo",
+        "Città": "Milano",
+        "Piano": 3,
+        "Metratura": 120
+    }
+
+    state = build_execution_environment(payload, epoch="time_zero")
+
+    sel_owner = get_selector_by_semantic_key(state, "Proprietario")
+    sel_city = get_selector_by_semantic_key(state, "Città")
+    sel_floor = get_selector_by_semantic_key(state, "Piano")
+    sel_area = get_selector_by_semantic_key(state, "Metratura")
+
+    scenarios = [
+        (
+            "Honest",
+            {
+                sel_owner: emit_evidence(state, sel_owner, "Enzo"),
+                sel_city: emit_evidence(state, sel_city, "Milano"),
+                sel_floor: emit_evidence(state, sel_floor, 3),
+                sel_area: emit_evidence(state, sel_area, 120),
+            }
+        ),
+        (
+            "Missing fragment",
+            {
+                sel_owner: emit_evidence(state, sel_owner, "Enzo"),
+                sel_floor: emit_evidence(state, sel_floor, 3),
+                sel_area: emit_evidence(state, sel_area, 120),
+            }
+        ),
+        (
+            "Semantic forgery",
+            {
+                sel_owner: emit_evidence(state, sel_owner, "Enzo"),
+                sel_city: emit_evidence(state, sel_city, "Milano"),
+                sel_floor: emit_evidence(state, sel_floor, 1),
+                sel_area: emit_evidence(state, sel_area, 120),
+            }
+        ),
+        (
+            "Replay approximation",
+            {
+                sel_owner: emit_evidence(
+                    state,
+                    sel_owner,
+                    "Enzo",
+                    epoch_override="wrong_epoch"
+                ),
+                sel_city: emit_evidence(
+                    state,
+                    sel_city,
+                    "Milano",
+                    epoch_override="wrong_epoch"
+                ),
+                sel_floor: emit_evidence(
+                    state,
+                    sel_floor,
+                    3,
+                    epoch_override="wrong_epoch"
+                ),
+                sel_area: emit_evidence(
+                    state,
+                    sel_area,
+                    120,
+                    epoch_override="wrong_epoch"
+                ),
+            }
+        ),
+        (
+            "C_int leak break",
+            {
+                sel_owner: emit_evidence(state, sel_owner, "Enzo"),
+                sel_city: emit_evidence(state, sel_city, "Milano"),
+                sel_floor: emit_evidence(state, sel_floor, 1),
+                sel_area: emit_evidence(state, sel_area, 40),
+            }
+        ),
+    ]
+
+    rows: List[Dict[str, Any]] = []
+
+    for label, evidence in scenarios:
+        received = len(evidence)
+
+        local_rate = (
+            sum(bool(ev.local_admissible) for ev in evidence.values())
+            / max(1, received)
+        )
+
+        cons_ok = bool(Cons_R(state, evidence))
+        identity_ok = bool(Verify_Identity(state, evidence)) if cons_ok else False
+        inv_ok = bool(Inv_C(state, evidence)) if cons_ok and identity_ok else False
+
+        vg_result = VG(state, evidence)
+        vg_ok = vg_result.startswith("ACCEPTED")
+
+        rows.append({
+            "scenario": label,
+            "local_rate": local_rate,
+            "Cons_R": int(cons_ok),
+            "Identity": int(identity_ok),
+            "Inv_C": int(inv_ok),
+            "V_G": int(vg_ok),
+        })
+
+    return rows
+
+
+# ==============================================================================
+# TEST 9 PLOT GENERATION
+# ==============================================================================
+
+def plot_test09(
+    rows: List[Dict[str, Any]],
+    out_dir: Path,
+    show_plots: bool = True
+) -> None:
+    """
+    Generates Test 9 comparison plots.
+
+    Output:
+      - test_09_local_vs_global_acceptance.png
+      - test_09_validation_barrier_outcomes.png
+
+    If show_plots=True, the figures are also displayed in the notebook output.
+    """
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    labels = [r["scenario"] for r in rows]
+    x = np.arange(len(labels))
+    width = 0.35
+
+    # --------------------------------------------------------------------------
+    # Plot 1: local admissibility vs global acceptance.
+    # --------------------------------------------------------------------------
+
+    plt.figure(figsize=(12, 7))
+
+    plt.bar(
+        x - width / 2,
+        [r["local_rate"] for r in rows],
+        width,
+        label="Local admissibility rate"
+    )
+
+    plt.bar(
+        x + width / 2,
+        [r["V_G"] for r in rows],
+        width,
+        label="Global V_G acceptance"
+    )
+
+    plt.xticks(x, labels, rotation=20, ha="right")
+    plt.ylim(0, 1.1)
+    plt.ylabel("Rate / binary outcome")
+    plt.title("CNVS Test 9: Local Admissibility vs Global Acceptance")
+    plt.grid(True, axis="y", linestyle="--", linewidth=0.5, alpha=0.65)
+    plt.legend()
+    plt.tight_layout()
+
+    output_1 = out_dir / "test_09_local_vs_global_acceptance.png"
+
+    plt.savefig(
+        output_1,
+        dpi=300
+    )
+
+    if show_plots:
+        plt.show()
+
+    plt.close()
+
+    # --------------------------------------------------------------------------
+    # Plot 2: sequential validation barrier outcomes.
+    # --------------------------------------------------------------------------
+
+    barriers = ["Cons_R", "Identity", "Inv_C", "V_G"]
+    values = np.array([[r[b] for b in barriers] for r in rows])
+
+    plt.figure(figsize=(12, 7))
+
+    for idx, barrier in enumerate(barriers):
+        plt.plot(
+            labels,
+            values[:, idx],
+            marker="o",
+            label=barrier
+        )
+
+    plt.ylim(-0.05, 1.05)
+    plt.ylabel("Passed barrier")
+    plt.title("CNVS Test 9: Sequential Validation Barrier Outcomes")
+    plt.grid(True, axis="y", linestyle="--", linewidth=0.5, alpha=0.65)
+    plt.xticks(rotation=20, ha="right")
+    plt.legend()
+    plt.tight_layout()
+
+    output_2 = out_dir / "test_09_validation_barrier_outcomes.png"
+
+    plt.savefig(
+        output_2,
+        dpi=300
+    )
+
+    if show_plots:
+        plt.show()
+
+    plt.close()
+
+# ==============================================================================
+# MAIN
+# ==============================================================================
+
 if __name__ == "__main__":
     run_scenarios()
+
+    plot_rows = collect_test09_plot_data()
+
+    output_dir = Path("figures/test_09")
+
+    plot_test09(
+        plot_rows,
+        output_dir,
+        show_plots=True
+    )
+
+    print("\n[Plot Output]")
+    print(f"Saved: {output_dir / 'test_09_local_vs_global_acceptance.png'}")
+    print(f"Saved: {output_dir / 'test_09_validation_barrier_outcomes.png'}")
+    print(f"Absolute folder: {output_dir.resolve()}")
