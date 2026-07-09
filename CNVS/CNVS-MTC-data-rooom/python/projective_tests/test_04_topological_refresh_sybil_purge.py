@@ -19,7 +19,7 @@ import matplotlib.ticker as mticker
 # CNVS THEOREM 4 STATISTICAL PROJECTION:
 # TOPOLOGICAL REFRESH, FAULT-INJECTION, AND SYBIL EPURATION
 #
-#  Test Name: Test 4: Statistical Projection of Topological Refresh and Sybil Purge (Iterative Fault-Injection Model).
+#  Test Name: Test 4 - Statistical Projection of Topological Refresh and Sybil Purge (Iterative Fault-Injection Model).
 #  filename = "test_04_topological_refresh_sybil_purge.py"
 #
 # PURPOSE:
