@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from typing import Dict, Any, List, Tuple, Set, Optional
 
 # ==============================================================================
-# Test Name: Test 10: Advanced Execution Environment (Full Structural-Semantic Model).
+# Test Name: Test 10 - Advanced Execution Environment (Full Structural-Semantic Model).
 # filename = "test_10_full_structural_semantic_model.py"
 #
 # PURPOSE:
