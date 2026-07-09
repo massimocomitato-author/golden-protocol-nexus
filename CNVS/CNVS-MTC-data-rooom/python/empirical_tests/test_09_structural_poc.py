@@ -18,8 +18,8 @@ from dataclasses import dataclass
 from typing import Dict, Any, Callable, List
 
 # ==============================================================================
-# CNVS STRUCTURAL PROOF-OF-CONCEPT: 
-# PEDAGOGICAL EXECUTION ENVIRONMENT
+# Test Name: Test 9 - Structural Proof-of-Concept (Decoupled Pedagogical Validation Model).
+# filename = "test_09_structural_poc.py"
 #
 # PURPOSE:
 # This script is an application-layer pedagogical demonstrator. It isolates
