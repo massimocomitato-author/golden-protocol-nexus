@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 # CNVS THEOREM 4 STATISTICAL PROJECTION:
 # SYSTEMIC DESIGN FORMULA & MINIMUM CRITICAL FRAGMENTATION
 #
-# Test Name: Test 5: Statistical Projection of Minimum Critical Fragmentation (mmin) under Asymmetric Topological Exposure.
+# Test Name: Test 5 - Statistical Projection of Minimum Critical Fragmentation (mmin) under Asymmetric Topological Exposure.
 # filename = "test_05_mmin_design_formula.py"
 #
 # PURPOSE:
