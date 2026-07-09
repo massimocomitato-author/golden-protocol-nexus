@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 # SYSTEMIC DESIGN FORMULA & MINIMUM CRITICAL FRAGMENTATION
 #
 # Test Name: Test 5: Statistical Projection of Minimum Critical Fragmentation (mmin) under Asymmetric Topological Exposure.
-#
+# filename = "test_05_mmin_design_formula.py"
 #
 # PURPOSE:
 # This script projects the minimum number of critical low-inference fragments 
