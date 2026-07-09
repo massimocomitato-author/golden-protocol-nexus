@@ -68,10 +68,12 @@ This makes them less convenient for deterministic academic reproduction, but mor
 
 ---
 
+## The non-uniform distribution of the weight of invariant constraints
 
-In the CNVS architecture, this is not merely an obfuscation mechanism. It is the engineering translation of a core theoretical feature: the non-uniform distribution of partial sub-invariants c_i associated with the global hidden invariant structure C_int across the relational graph.
 
-The system does not distribute algebraic criticality uniformly across all fragments. Instead, the algebraic weight of C_int is concentrated asymmetrically within a restricted critical subset of cardinality $m$, while the remaining fragments populate the broader topology as structurally valid but algebraically non-critical elements.
+In the CNVS architecture, the existence of a non-uniform distribution of invariant constraints along the graph up to the terminal leaves produces an obfuscation mechanism that hinders inference through observation of network traffic. The engineering translation of this fundamental theoretical feature occurs in implementation tests through the introduction of the k-factor and TOPOLOGY_MULTIPLIER.
+
+In other words, the system does not distribute algebraic criticality uniformly across all fragments. Instead, the algebraic weight of C_int is concentrated asymmetrically within a restricted critical subset of cardinality $m$, while the remaining fragments populate the broader topology as structurally valid but algebraically non-critical elements.
 
 Thus, the network contains:
 
@@ -84,7 +86,7 @@ This creates topological camouflage: the adversary cannot determine which fragme
 
 As a consequence, traffic analysis does not directly reveal the critical subset. The adversary is forced into a combinatorial uncertainty space, where successful reconstruction requires identifying or inferring the hidden critical subset and satisfying the corresponding invariant constraints.
 
-2. Extension of the Shattered Object Metaphor
+## 2. Extension of the Shattered Object Metaphor
 
 This mechanism extends the shattered-object metaphor introduced in the architectural notice.
 
@@ -124,7 +126,7 @@ This is the engineering meaning of non-uniform criticality.
 
 The system does not merely hide values. It hides the structural relevance of values.
 
-3. Security Interpretation
+## 3. Security Interpretation
 
 The topological multiplier increases the adversary’s uncertainty in two distinct ways.
 
@@ -150,7 +152,7 @@ The parameter k measures the broader distributed fragment universe.
 
 The difference k - m represents the topological camouflage layer that surrounds the critical subset.
 
-4. Engineering Meaning inside Test 12
+## 4. Engineering Meaning inside Test 12
 
 In Test 12, this behavior is represented by:
 
@@ -162,7 +164,7 @@ The result is a more realistic engineering model in which the adversary does not
 
 This better approximates the intended CNVS architecture, where the hidden invariant structure is distributed non-uniformly and cannot be reconstructed from local fragment inspection alone.
 
-5. Final Interpretation
+## 5. Final Interpretation
 
 The topological multiplier should therefore be interpreted as an engineering approximation of CNVS topological camouflage.
 
@@ -176,6 +178,7 @@ or, more compactly:
 CNVS does not only hide the value of the fragment.
 It hides the role of the fragment inside the global structure.
 
+---
 
 
 ## Important Limitation
