@@ -20,8 +20,8 @@ import matplotlib.pyplot as plt
 # CNVS THEOREM 4 STATISTICAL PROJECTION:
 # DYNAMIC RESIDUAL MIN-ENTROPY EROSION STRESS TEST
 #
-#
 #   Test Name: Test 2: Statistical Projection (Stress Test) under Dynamic Erosion of the Residual Min-Entropy.
+#   filename = "test_02_dynamic_entropy_erosion.py"
 #
 # PURPOSE:
 # This simulator acts as a formal stress test for the CNVS reconstruction layer.
