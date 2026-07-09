@@ -702,29 +702,38 @@ def plot_test09(
     plt.close()
 
     # --------------------------------------------------------------------------
-    # Plot 2: sequential validation barrier outcomes.
+    # Plot 2: Sequential Validation Barrier Outcomes (Heatmap)
     # --------------------------------------------------------------------------
+    from matplotlib.colors import ListedColormap
 
     barriers = ["Cons_R", "Identity", "Inv_C", "V_G"]
     values = np.array([[r[b] for b in barriers] for r in rows])
 
-    plt.figure(figsize=(12, 7))
+    fig, ax = plt.subplots(figsize=(10, 6))
 
-    for idx, barrier in enumerate(barriers):
-        plt.plot(
-            labels,
-            values[:, idx],
-            marker="o",
-            label=barrier
-        )
+    # Creiamo una mappa di calore binaria: Rosso (0 = Fail), Verde (1 = Pass)
+    cmap = ListedColormap(['#d62728', '#2ca02c'])
 
-    plt.ylim(-0.05, 1.05)
-    plt.ylabel("Passed barrier")
-    plt.title("CNVS Test 9: Sequential Validation Barrier Outcomes")
-    plt.grid(True, axis="y", linestyle="--", linewidth=0.5, alpha=0.65)
-    plt.xticks(rotation=20, ha="right")
-    plt.legend()
-    plt.tight_layout()
+    cax = ax.imshow(values, cmap=cmap, aspect='auto')
+
+    # Impostiamo le etichette per assi X e Y
+    ax.set_xticks(np.arange(len(barriers)))
+    ax.set_yticks(np.arange(len(labels)))
+    ax.set_xticklabels(barriers)
+    ax.set_yticklabels(labels)
+
+    # Ruotiamo le etichette in basso per leggibilità
+    plt.setp(ax.get_xticklabels(), rotation=20, ha="right", rotation_mode="anchor")
+
+    # Inseriamo il testo (PASS/FAIL) dentro ogni singola cella della matrice
+    for i in range(len(labels)):
+        for j in range(len(barriers)):
+            val = values[i, j]
+            text_label = "PASS" if val == 1 else "FAIL"
+            ax.text(j, i, text_label, ha="center", va="center", color="white", fontweight="bold")
+
+    ax.set_title("CNVS Test 9: Sequential Validation Barrier Outcomes (State Matrix)")
+    fig.tight_layout()
 
     output_2 = out_dir / "test_09_validation_barrier_outcomes.png"
 
