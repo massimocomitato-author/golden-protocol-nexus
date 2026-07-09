@@ -20,7 +20,7 @@ import matplotlib.ticker as mticker
 # TOPOLOGICAL REFRESH, FAULT-INJECTION, AND SYBIL EPURATION
 #
 #  Test Name: Test 4: Statistical Projection of Topological Refresh and Sybil Purge (Iterative Fault-Injection Model).
-#  
+#  filename = "test_04_topological_refresh_sybil_purge.py"
 #
 # PURPOSE:
 # This script projects the behavior of metadata accumulation over time under 
