@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 # CNVS THEOREM 4 STATISTICAL PROJECTION:
 # DEPENDENT COLLUSION, GLOBAL VETO, AND ECONOMIC PENALTY MODEL
 #
-#  Test Name: Test 3: Statistical Projection of Reconstruction Decay and Economic Penalty (Slashing) Model under Extreme Dependent Collusion.
+#  Test Name: Test 3 - Statistical Projection of Reconstruction Decay and Economic Penalty (Slashing) Model under Extreme Dependent Collusion.
 #  filename = "test_03_slashing_expected_value.py"
 #
 # PURPOSE:
