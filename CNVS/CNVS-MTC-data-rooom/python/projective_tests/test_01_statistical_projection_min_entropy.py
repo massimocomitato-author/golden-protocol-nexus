@@ -22,7 +22,6 @@ import matplotlib.pyplot as plt
 #  Test Name: Test 1 - Statistical Projection of Systemic Reconstruction under Dependent Collusion (Min-Entropy Variation).
 #  filename = "test_01_statistical_projection_min_entropy.py"
 #
-#
 # PURPOSE:
 # This script is a statistical demonstrator. It projects the probabilistic 
 # behavior of the CNVS adversarial reconstruction layer, ASSUMING the formal 
