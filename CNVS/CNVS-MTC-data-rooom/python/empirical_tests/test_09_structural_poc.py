@@ -711,21 +711,21 @@ def plot_test09(
 
     fig, ax = plt.subplots(figsize=(10, 6))
 
-    # Creiamo una mappa di calore binaria: Rosso (0 = Fail), Verde (1 = Pass)
+    # Red (0 = Fail), Green (1 = Pass)
     cmap = ListedColormap(['#d62728', '#2ca02c'])
 
     cax = ax.imshow(values, cmap=cmap, aspect='auto')
 
-    # Impostiamo le etichette per assi X e Y
+    # Config X e Y
     ax.set_xticks(np.arange(len(barriers)))
     ax.set_yticks(np.arange(len(labels)))
     ax.set_xticklabels(barriers)
     ax.set_yticklabels(labels)
 
-    # Ruotiamo le etichette in basso per leggibilità
+    
     plt.setp(ax.get_xticklabels(), rotation=20, ha="right", rotation_mode="anchor")
 
-    # Inseriamo il testo (PASS/FAIL) dentro ogni singola cella della matrice
+    # Insert Matrix
     for i in range(len(labels)):
         for j in range(len(barriers)):
             val = values[i, j]
