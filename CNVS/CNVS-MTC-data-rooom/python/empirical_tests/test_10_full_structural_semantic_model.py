@@ -15,10 +15,14 @@
 
 import hashlib
 import json
+import math
 import random
 import statistics
+from pathlib import Path
 from dataclasses import dataclass
 from typing import Dict, Any, List, Tuple, Set, Optional
+
+import matplotlib.pyplot as plt
 
 # ==============================================================================
 # Test Name: Test 10 - Advanced Execution Environment (Full Structural-Semantic Model).
@@ -155,7 +159,7 @@ class AdversaryView:
 
 @dataclass
 class SimulationConfig:
-    trials: int = 10_000
+    trials: int = 100_000
     n_verifiers: int = 64
     coalition_fraction: float = 0.10
     gamma_top_leak: float = 0.12
@@ -556,31 +560,315 @@ def print_progressive_mass_collusion_results(results: List[Dict[str, Any]], titl
     for r in results:
         print(f"{r['coalition_fraction'] * 100:7.0f}% | {r['avg_h_crit']:5.2f} | {r['avg_controlled_critical']:8.2f} | {r['max_controlled_critical']:8d} | {r['all_critical_controlled_rate']:15.8f} | {r['blind_false_accept_rate']:15.8f} | {r['Cint_leak_break_rate']:19.8f}")
 
+
+# ==============================================================================
+# THEOREM-STYLE REFERENCES AND COMPARISON PLOTS
+# ==============================================================================
+
+def direct_control_reference(q: float, h_crit: float) -> float:
+    """
+    Direct-control baseline:
+
+        P_direct = q ^ h_crit
+
+    This is a comparison reference only and is not used to decide V_G acceptance.
+    """
+    if h_crit <= 0:
+        return 1.0
+
+    return float(q ** h_crit)
+
+
+def bounded_inference_theorem_reference(
+    q: float,
+    h_crit: float,
+    cfg: SimulationConfig
+) -> float:
+    """
+    CNVS-style theorem reference for Test 10.
+
+    Test 10 does not use the explicit h_min parameter of Test 11. It models
+    dependent inference through p_infer_cap and p_identity_after_infer.
+
+    Therefore, for comparison only, the effective compromise probability is:
+
+        p_eff = q + (1 - q) * p_infer_cap * p_identity_after_infer
+
+    and the plotted theorem-style reference is:
+
+        theorem_ref = p_eff ^ h_crit
+
+    Interpretation:
+      - q covers direct verifier compromise;
+      - p_infer_cap bounds inference of a missing critical selector;
+      - p_identity_after_infer bounds whether the inferred selector also obtains
+        a valid identity proof;
+      - h_crit is the average critical-selector threshold observed in the run.
+
+    This curve is not used by the executable V_G pipeline.
+    """
+    if h_crit <= 0:
+        return 1.0
+
+    p_infer_with_identity = cfg.p_infer_cap * cfg.p_identity_after_infer
+    p_eff = q + (1.0 - q) * p_infer_with_identity
+    p_eff = max(0.0, min(1.0, p_eff))
+
+    return float(p_eff ** h_crit)
+
+
+def enrich_test10_results_with_references(
+    results: List[Dict[str, Any]],
+    cfg: SimulationConfig
+) -> List[Dict[str, Any]]:
+    enriched = []
+
+    for row in results:
+        q = float(row["coalition_fraction"])
+        h_crit = float(row["avg_h_crit"])
+
+        new_row = dict(row)
+        new_row["direct_control_reference"] = direct_control_reference(q, h_crit)
+        new_row["theorem_reference"] = bounded_inference_theorem_reference(q, h_crit, cfg)
+
+        enriched.append(new_row)
+
+    return enriched
+
+
+def plot_progressive_mass_collusion_comparison(
+    ordinary_results: List[Dict[str, Any]],
+    leak_results: List[Dict[str, Any]],
+    ordinary_cfg: SimulationConfig,
+    out_dir: Path,
+    show_plots: bool = True
+) -> None:
+    """
+    Generates and displays Test 10 comparison plots.
+
+    Output:
+      - test_10_threshold_breach_vs_theorem_reference.png
+      - test_10_false_accept_vs_cint_leak_logscale.png
+      - test_10_controlled_critical_vs_threshold.png
+
+    If show_plots=True, the figures are also displayed in notebook / Colab output.
+    """
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    ordinary = enrich_test10_results_with_references(ordinary_results, ordinary_cfg)
+    leak = leak_results
+
+    x = [100.0 * r["coalition_fraction"] for r in ordinary]
+
+    p_all = [r["all_critical_controlled_rate"] for r in ordinary]
+    p_false = [r["blind_false_accept_rate"] for r in ordinary]
+    p_leak = [r["Cint_leak_break_rate"] for r in leak]
+
+    direct_ref = [r["direct_control_reference"] for r in ordinary]
+    theorem_ref = [r["theorem_reference"] for r in ordinary]
+
+    avg_h = [r["avg_h_crit"] for r in ordinary]
+    avg_ctrl = [r["avg_controlled_critical"] for r in ordinary]
+    max_ctrl = [r["max_controlled_critical"] for r in ordinary]
+
+    floor = 1.0 / max(1, ordinary_cfg.trials)
+
+    # --------------------------------------------------------------------------
+    # Plot 1: threshold breach vs theorem-style references.
+    # --------------------------------------------------------------------------
+
+    plt.figure(figsize=(12, 7))
+
+    plt.plot(
+        x,
+        p_all,
+        marker="o",
+        label="Observed P(all critical controlled)"
+    )
+
+    plt.plot(
+        x,
+        direct_ref,
+        linestyle="--",
+        marker="s",
+        label="Direct-control reference q^h_crit"
+    )
+
+    plt.plot(
+        x,
+        theorem_ref,
+        linestyle=":",
+        marker="^",
+        label="Theorem-style bounded inference reference"
+    )
+
+    plt.xlabel("Peripheral verifier compromise q (%)")
+    plt.ylabel("Probability")
+    plt.title("CNVS Test 10: Threshold Breach vs Theorem-Style References")
+    plt.grid(True, linestyle="--", linewidth=0.5, alpha=0.65)
+    plt.legend()
+    plt.tight_layout()
+
+    output_1 = out_dir / "test_10_threshold_breach_vs_theorem_reference.png"
+    plt.savefig(output_1, dpi=300)
+
+    if show_plots:
+        plt.show()
+
+    plt.close()
+
+    # --------------------------------------------------------------------------
+    # Plot 2: ordinary false acceptance vs C_int leakage boundary, log scale.
+    # --------------------------------------------------------------------------
+
+    plt.figure(figsize=(12, 7))
+
+    plt.semilogy(
+        x,
+        [max(v, floor) for v in p_false],
+        marker="o",
+        label="Observed P(false accept), ordinary C_pub-only model"
+    )
+
+    plt.semilogy(
+        x,
+        [max(v, floor) for v in p_leak],
+        marker="s",
+        label="Observed P(C_int leak break), leakage boundary"
+    )
+
+    plt.semilogy(
+        x,
+        [max(v, floor) for v in theorem_ref],
+        linestyle=":",
+        marker="^",
+        label="Theorem-style bounded inference reference"
+    )
+
+    plt.xlabel("Peripheral verifier compromise q (%)")
+    plt.ylabel(f"Probability, log scale; floor = 1 / {ordinary_cfg.trials}")
+    plt.title("CNVS Test 10: Ordinary False Acceptance vs C_int Leakage Boundary")
+    plt.grid(True, which="both", linestyle="--", linewidth=0.5, alpha=0.65)
+    plt.legend()
+    plt.tight_layout()
+
+    output_2 = out_dir / "test_10_false_accept_vs_cint_leak_logscale.png"
+    plt.savefig(output_2, dpi=300)
+
+    if show_plots:
+        plt.show()
+
+    plt.close()
+
+    # --------------------------------------------------------------------------
+    # Plot 3: average critical control growth.
+    # --------------------------------------------------------------------------
+
+    plt.figure(figsize=(12, 7))
+
+    plt.plot(
+        x,
+        avg_ctrl,
+        marker="o",
+        label="Average controlled critical selectors"
+    )
+
+    plt.plot(
+        x,
+        avg_h,
+        linestyle="--",
+        label="Average h_crit threshold"
+    )
+
+    plt.plot(
+        x,
+        max_ctrl,
+        linestyle=":",
+        marker="s",
+        label="Maximum controlled critical selectors"
+    )
+
+    plt.xlabel("Peripheral verifier compromise q (%)")
+    plt.ylabel("Critical selector count")
+    plt.title("CNVS Test 10: Controlled Critical Selectors vs h_crit Threshold")
+    plt.grid(True, linestyle="--", linewidth=0.5, alpha=0.65)
+    plt.legend()
+    plt.tight_layout()
+
+    output_3 = out_dir / "test_10_controlled_critical_vs_threshold.png"
+    plt.savefig(output_3, dpi=300)
+
+    if show_plots:
+        plt.show()
+
+    plt.close()
+
+    print("\n[Plot Output]")
+    print(f"Saved: {output_1}")
+    print(f"Saved: {output_2}")
+    print(f"Saved: {output_3}")
+    print(f"Absolute folder: {out_dir.resolve()}")
+
+
 # ==============================================================================
 # MAIN
 # ==============================================================================
 
 if __name__ == "__main__":
+
+    TRIALS = 100_000
+
     ordinary_cfg = SimulationConfig(
-        trials=10_000, n_verifiers=64, coalition_fraction=0.10, gamma_top_leak=0.12,
-        dependent_infer_base=0.015, dependent_infer_rho=0.35, p_infer_cap=0.45,
-        p_identity_after_infer=0.15, blind_attempts=1, C_int_leak_probability=0.0, seed=42,
+        trials=TRIALS,
+        n_verifiers=64,
+        coalition_fraction=0.10,
+        gamma_top_leak=0.12,
+        dependent_infer_base=0.015,
+        dependent_infer_rho=0.35,
+        p_infer_cap=0.45,
+        p_identity_after_infer=0.15,
+        blind_attempts=1,
+        C_int_leak_probability=0.0,
+        seed=42,
     )
 
     scenario_full_refresh_attack(ordinary_cfg)
 
     ordinary_results = run_progressive_mass_collusion(ordinary_cfg)
-    print_progressive_mass_collusion_results(ordinary_results, title="PROGRESSIVE MASS COLLUSION — ORDINARY MODEL (C_pub ONLY)")
 
-    # Upper-Bound Validation (Assumption of total C_int leakage)
+    print_progressive_mass_collusion_results(
+        ordinary_results,
+        title="PROGRESSIVE MASS COLLUSION — ORDINARY MODEL (C_pub ONLY)"
+    )
+
     leakage_cfg = SimulationConfig(
-        trials=10_000, n_verifiers=64, coalition_fraction=0.10, gamma_top_leak=0.12,
-        dependent_infer_base=0.015, dependent_infer_rho=0.35, p_infer_cap=0.45,
-        p_identity_after_infer=0.15, blind_attempts=1, C_int_leak_probability=1.0, seed=4242,
+        trials=TRIALS,
+        n_verifiers=64,
+        coalition_fraction=0.10,
+        gamma_top_leak=0.12,
+        dependent_infer_base=0.015,
+        dependent_infer_rho=0.35,
+        p_infer_cap=0.45,
+        p_identity_after_infer=0.15,
+        blind_attempts=1,
+        C_int_leak_probability=1.0,
+        seed=4242,
     )
 
     leak_results = run_progressive_mass_collusion(leakage_cfg)
-    print_progressive_mass_collusion_results(leak_results, title="PROGRESSIVE MASS COLLUSION — C_int LEAKAGE BOUNDARY PROJECTION")
+
+    print_progressive_mass_collusion_results(
+        leak_results,
+        title="PROGRESSIVE MASS COLLUSION — C_int LEAKAGE BOUNDARY PROJECTION"
+    )
+
+    plot_progressive_mass_collusion_comparison(
+        ordinary_results=ordinary_results,
+        leak_results=leak_results,
+        ordinary_cfg=ordinary_cfg,
+        out_dir=Path("figures/test_10"),
+        show_plots=True
+    )
 
     print("\n================ FINAL ARCHITECTURAL INTERPRETATION ================\n")
     print("- Moving Target Defense: Each instance refreshes topology, binding, and invariant family C={c_i}.")
@@ -588,3 +876,4 @@ if __name__ == "__main__":
     print("- P(all critical) measures threshold breach.")
     print("- P(false accept) measures false global acceptance under the ordinary C_pub-only view.")
     print("- The C_int leak run provides a theoretical upper-bound break model.")
+    print("- The theorem-style reference is plotted only as a comparison curve and is not used by V_G.")
