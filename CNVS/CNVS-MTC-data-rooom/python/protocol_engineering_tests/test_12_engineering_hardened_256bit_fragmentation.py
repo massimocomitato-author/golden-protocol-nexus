@@ -11,6 +11,16 @@
 # SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 # ==============================================================================
 
+
+#
+#
+# Test Name: CNVS Test 12 - Engineering-Hardened 256-bit Fragmentation Sensitivity Test under Hidden Invariant Binding.
+# filname:  test_12_engineering_hardened_256bit_fragmentation
+#
+#
+
+
+
 """
 CNVS Test 12:
 Engineering-Hardened 256-bit Fragmentation Sensitivity Test
