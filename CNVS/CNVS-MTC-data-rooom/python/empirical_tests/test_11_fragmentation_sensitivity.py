@@ -11,17 +11,17 @@
 # SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 # ==============================================================================
 
-
-
 import math
+from pathlib import Path
+from dataclasses import dataclass
+
 import numpy as np
 import matplotlib.pyplot as plt
-from dataclasses import dataclass
 
 
 # ==============================================================================
 # Test Name: Test 11 - Executable Fragmentation Sensitivity under Hidden Invariant Binding
-# filename = "test_11_fragmentation_sensitivity.py"
+# filename = "test_11_fragmentation_sensitivity_100k_2048_with_plots.py"
 #
 # Purpose:
 #   This test extends the logic of CNVS Test 10.
@@ -43,7 +43,7 @@ from dataclasses import dataclass
 #
 #       V_L -> Cons_R -> Inv_C -> V_G
 #
-#   The analytical formula is shown only as a reference curve.
+#   The analytical formula is shown only as a comparison reference.
 #
 # What is simulated:
 #   1. terminal fragments;
@@ -75,6 +75,10 @@ class State:
     pairs: list
 
 
+# ==============================================================================
+# BASIC UTILITIES
+# ==============================================================================
+
 def inv_mod(a, p=PRIME):
     return pow(int(a), p - 2, p)
 
@@ -92,6 +96,21 @@ def p_inf_from_h(h_min):
     return 1.0 if h_min <= 0 else 2.0 ** (-float(h_min))
 
 
+def make_point_rng(seed_base: int, q_index: int, m_value: int, stream: int = 0):
+    """
+    Deterministic but separated seed construction.
+
+    Each (q, m) point receives an independent pseudo-random stream while remaining
+    reproducible for academic review.
+    """
+    seed_sequence = np.random.SeedSequence([seed_base, q_index, int(m_value), stream])
+    return np.random.default_rng(seed_sequence)
+
+
+# ==============================================================================
+# STATE CONSTRUCTION
+# ==============================================================================
+
 def build_state(k, m, rng):
     """
     Build a finite CNVS-like candidate state.
@@ -108,6 +127,9 @@ def build_state(k, m, rng):
       - pair constraints;
       - global invariant binding.
     """
+
+    if m > k:
+        raise ValueError("m must be <= k. Critical fragments cannot exceed terminal fragments.")
 
     true = rng.integers(0, PRIME, size=k, dtype=np.int64)
 
@@ -131,7 +153,7 @@ def build_state(k, m, rng):
 
     # Hidden pairwise relational constraints:
     #
-    #     target = x_i + c * x_j + x_i*x_j mod PRIME
+    #     target = x_i + c*x_j + x_i*x_j mod PRIME
     #
     # These constraints make V_G non-reducible to local syntactic validity.
     pairs = []
@@ -214,7 +236,6 @@ def Inv_C(state, values):
     but should fail Inv_C with overwhelming probability.
     """
 
-    # Individual hidden C_int tags.
     for i in state.crit:
         if (
             int(state.a[i]) * int(values[i])
@@ -222,7 +243,6 @@ def Inv_C(state, values):
         ) % PRIME != int(state.tag[i]):
             return False
 
-    # Pairwise hidden constraints.
     for x, y, c, target in state.pairs:
         if (
             int(values[x])
@@ -352,7 +372,7 @@ def make_adversarial_values(
 
 
 # ==============================================================================
-# EXACT REFERENCE CURVE FOR INJECTIVE ASSIGNMENT
+# EXACT AND THEOREM REFERENCES
 # ==============================================================================
 
 def log_comb(n, k):
@@ -384,19 +404,34 @@ def hypergeom_pmf(x, Q, r, m):
 
 def exact_injective_reference(Q, r, m, p_inf):
     """
-    Reference probability only.
+    Exact injective-assignment reference.
 
     This is not used to decide V_G acceptance.
     It is plotted only to compare the executable result with the expected
-    injective-assignment reconstruction probability.
-    """
+    injective-assignment reconstruction probability:
 
+        sum_x Hypergeom(Q, r, m; x) * p_inf^(m-x)
+    """
     total = 0.0
 
     for x in range(max(0, m - (Q - r)), min(m, r) + 1):
         total += hypergeom_pmf(x, Q, r, m) * (p_inf ** (m - x))
 
     return total
+
+
+def theorem_reference(q, m, p_inf):
+    """
+    Compact CNVS theorem-style reference:
+
+        p_comp = q + (1 - q) * p_inf
+
+        theorem_ref = p_comp^m
+
+    This curve is not used to decide V_G acceptance.
+    """
+    p_comp = q + (1.0 - q) * p_inf
+    return p_comp ** m
 
 
 # ==============================================================================
@@ -410,28 +445,35 @@ def simulate_one_m(
     h_min,
     iterations,
     rng,
-    topology_multiplier=2
+    terminal_fragments,
 ):
     """
     Simulate one fragmentation level m.
 
-    k grows with m to represent deeper fragmentation.
+    In this high-resolution variant, the total number of terminal fragments is
+    fixed at terminal_fragments = 2048, while m varies up to 2048.
     """
 
     if not (0 <= q < 1):
         raise ValueError("q must satisfy 0 <= q < 1.")
 
     r = min(max(int(round(q * Q)), 0), Q - 1)
-    k = max(50, topology_multiplier * m)
+    k = int(terminal_fragments)
 
     if k > Q:
-        raise ValueError("k exceeds Q; reduce m or increase Q.")
+        raise ValueError(
+            f"Injective assignment requires k <= Q, but k={k} and Q={Q}. "
+            "Increase Q or reduce terminal_fragments."
+        )
+
+    if m > k:
+        raise ValueError(
+            f"Critical fragments m={m} cannot exceed terminal fragments k={k}."
+        )
 
     p_inf = p_inf_from_h(h_min)
-
     state = build_state(k, m, rng)
 
-    # Honest sanity check.
     honest_accept, _, _, _ = V_G(state, state.true)
 
     if not honest_accept:
@@ -443,9 +485,9 @@ def simulate_one_m(
     veto = 0
     local_pass_global_veto = 0
 
-    direct_counts = []
-    inferred_counts = []
-    failed_counts = []
+    direct_total = 0
+    inferred_total = 0
+    failed_total = 0
 
     for _ in range(iterations):
 
@@ -463,17 +505,15 @@ def simulate_one_m(
 
         acc, local_ok, rel_ok, inv_ok = V_G(state, candidate)
 
-        direct_counts.append(d)
-        inferred_counts.append(inf)
-        failed_counts.append(fail)
+        direct_total += d
+        inferred_total += inf
+        failed_total += fail
 
         if acc:
             accepted += 1
         else:
             veto += 1
 
-            # This is the key CNVS signal:
-            # local admissibility and Cons_R pass, but V_G rejects through Inv_C.
             if local_ok and rel_ok:
                 local_pass_global_veto += 1
 
@@ -491,7 +531,8 @@ def simulate_one_m(
 
     leak_accept, _, _, _ = V_G(state, leaked_candidate)
 
-    p_comp = q + (1 - q) * p_inf
+    exact_ref = exact_injective_reference(Q, r, m, p_inf)
+    theorem_ref = theorem_reference(q, m, p_inf)
 
     return {
         "q": q,
@@ -504,13 +545,270 @@ def simulate_one_m(
         "VG_veto_ordinary": veto / iterations,
         "local_pass_global_veto": local_pass_global_veto / iterations,
         "Cint_leak_accepts": bool(leak_accept),
-        "exact_injective_reference": exact_injective_reference(Q, r, m, p_inf),
-        "theorem_reference": p_comp ** m,
-        "avg_direct": float(np.mean(direct_counts)),
-        "avg_inferred": float(np.mean(inferred_counts)),
-        "avg_failed": float(np.mean(failed_counts)),
+        "exact_injective_reference": exact_ref,
+        "theorem_reference": theorem_ref,
+        "avg_direct": direct_total / iterations,
+        "avg_inferred": inferred_total / iterations,
+        "avg_failed": failed_total / iterations,
     }
 
+
+# ==============================================================================
+# PLOTTING
+# ==============================================================================
+
+def plot_test11_comparisons(
+    results,
+    iterations,
+    out_dir,
+    selected_q_for_curves,
+    show_plots=True
+):
+    """
+    Generates and displays Test 11 comparison plots.
+
+    Output:
+      - test_11_selected_q_vg_acceptance_vs_references.png
+      - test_11_all_points_empirical_vs_references.png
+      - test_11_local_pass_global_veto_heatmap.png
+      - test_11_max_fragmentation_vs_q.png
+
+    If show_plots=True, the figures are displayed in notebook / Colab output.
+    """
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    floor = 1.0 / max(1, iterations)
+
+    # --------------------------------------------------------------------------
+    # Plot 1: selected q curves, empirical vs exact vs theorem.
+    # --------------------------------------------------------------------------
+
+    plt.figure(figsize=(13, 8))
+
+    for q in selected_q_for_curves:
+        if q not in results:
+            continue
+
+        rows = results[q]
+
+        m_axis = np.array([r["m"] for r in rows])
+        empirical = np.array([r["VG_accept_ordinary"] for r in rows])
+        exact_ref = np.array([r["exact_injective_reference"] for r in rows])
+        theorem_ref = np.array([r["theorem_reference"] for r in rows])
+
+        plt.plot(
+            m_axis,
+            np.maximum(empirical, floor),
+            marker="o",
+            label=f"Executable V_G, q={q:.2f}"
+        )
+
+        plt.plot(
+            m_axis,
+            np.maximum(exact_ref, floor),
+            linestyle="--",
+            label=f"Exact injective, q={q:.2f}"
+        )
+
+        plt.plot(
+            m_axis,
+            np.maximum(theorem_ref, floor),
+            linestyle=":",
+            label=f"Theorem ref, q={q:.2f}"
+        )
+
+    plt.xscale("log", base=2)
+    plt.yscale("log")
+    plt.xlabel("Critical fragmentation cardinality m")
+    plt.ylabel(f"Unauthorized reconstruction / V_G acceptance probability; floor = 1 / {iterations}")
+    plt.title("CNVS Test 11: Executable V_G Acceptance vs Exact and Theorem References")
+    plt.grid(True, which="both", linestyle="--", linewidth=0.5, alpha=0.65)
+    plt.legend(fontsize=8, ncol=2)
+    plt.tight_layout()
+
+    output_1 = out_dir / "test_11_selected_q_vg_acceptance_vs_references.png"
+    plt.savefig(output_1, dpi=300)
+
+    if show_plots:
+        plt.show()
+
+    plt.close()
+
+    # --------------------------------------------------------------------------
+    # Plot 2: all empirical points against exact and theorem references.
+    # --------------------------------------------------------------------------
+
+    empirical_all = []
+    exact_all = []
+    theorem_all = []
+
+    for _, rows in results.items():
+        for r in rows:
+            empirical_all.append(max(r["VG_accept_ordinary"], floor))
+            exact_all.append(max(r["exact_injective_reference"], floor))
+            theorem_all.append(max(r["theorem_reference"], floor))
+
+    empirical_all = np.array(empirical_all)
+    exact_all = np.array(exact_all)
+    theorem_all = np.array(theorem_all)
+
+    min_axis = floor
+    max_axis = 1.0
+
+    plt.figure(figsize=(9, 9))
+
+    plt.scatter(
+        exact_all,
+        empirical_all,
+        marker="o",
+        label="Empirical vs exact injective reference"
+    )
+
+    plt.scatter(
+        theorem_all,
+        empirical_all,
+        marker="^",
+        label="Empirical vs theorem reference"
+    )
+
+    plt.plot(
+        [min_axis, max_axis],
+        [min_axis, max_axis],
+        linestyle="--",
+        label="Ideal alignment y = x"
+    )
+
+    plt.xscale("log")
+    plt.yscale("log")
+    plt.xlabel("Reference probability")
+    plt.ylabel("Observed executable V_G acceptance")
+    plt.title("CNVS Test 11: Empirical Acceptance vs Reference Curves")
+    plt.grid(True, which="both", linestyle="--", linewidth=0.5, alpha=0.65)
+    plt.legend()
+    plt.tight_layout()
+
+    output_2 = out_dir / "test_11_all_points_empirical_vs_references.png"
+    plt.savefig(output_2, dpi=300)
+
+    if show_plots:
+        plt.show()
+
+    plt.close()
+
+    # --------------------------------------------------------------------------
+    # Plot 3: Local-pass / Global-Veto heatmap.
+    # --------------------------------------------------------------------------
+
+    q_values = list(results.keys())
+    m_values = [r["m"] for r in next(iter(results.values()))]
+
+    heatmap = np.array([
+        [r["local_pass_global_veto"] for r in results[q]]
+        for q in q_values
+    ])
+
+    plt.figure(figsize=(13, 8))
+
+    im = plt.imshow(
+        heatmap,
+        aspect="auto",
+        origin="lower"
+    )
+
+    plt.colorbar(im, label="Local-pass / Global-Veto rate")
+    plt.xticks(
+        ticks=np.arange(len(m_values)),
+        labels=[str(m) for m in m_values],
+        rotation=45,
+        ha="right"
+    )
+    plt.yticks(
+        ticks=np.arange(len(q_values)),
+        labels=[f"{q:.2f}" for q in q_values]
+    )
+    plt.xlabel("Critical fragmentation cardinality m")
+    plt.ylabel("Peripheral compromise q")
+    plt.title("CNVS Test 11: Non-Reducibility Heatmap")
+    plt.tight_layout()
+
+    output_3 = out_dir / "test_11_local_pass_global_veto_heatmap.png"
+    plt.savefig(output_3, dpi=300)
+
+    if show_plots:
+        plt.show()
+
+    plt.close()
+
+    # --------------------------------------------------------------------------
+    # Plot 4: max fragmentation vs q.
+    # --------------------------------------------------------------------------
+
+    max_m = max(m_values)
+
+    q_axis = []
+    empirical_final = []
+    exact_final = []
+    theorem_final = []
+
+    for q, rows in results.items():
+        row = next(r for r in rows if r["m"] == max_m)
+
+        q_axis.append(q)
+        empirical_final.append(max(row["VG_accept_ordinary"], floor))
+        exact_final.append(max(row["exact_injective_reference"], floor))
+        theorem_final.append(max(row["theorem_reference"], floor))
+
+    plt.figure(figsize=(12, 7))
+
+    plt.semilogy(
+        q_axis,
+        empirical_final,
+        marker="o",
+        label=f"Executable V_G acceptance at m={max_m}"
+    )
+
+    plt.semilogy(
+        q_axis,
+        exact_final,
+        linestyle="--",
+        marker="s",
+        label=f"Exact injective reference at m={max_m}"
+    )
+
+    plt.semilogy(
+        q_axis,
+        theorem_final,
+        linestyle=":",
+        marker="^",
+        label=f"Theorem reference at m={max_m}"
+    )
+
+    plt.xlabel("Peripheral verifier compromise q")
+    plt.ylabel(f"Probability, log scale; floor = 1 / {iterations}")
+    plt.title(f"CNVS Test 11: Max Fragmentation m={max_m} vs q")
+    plt.grid(True, which="both", linestyle="--", linewidth=0.5, alpha=0.65)
+    plt.legend()
+    plt.tight_layout()
+
+    output_4 = out_dir / "test_11_max_fragmentation_vs_q.png"
+    plt.savefig(output_4, dpi=300)
+
+    if show_plots:
+        plt.show()
+
+    plt.close()
+
+    print("\n[Plot Output]")
+    print(f"Saved: {output_1}")
+    print(f"Saved: {output_2}")
+    print(f"Saved: {output_3}")
+    print(f"Saved: {output_4}")
+    print(f"Absolute folder: {out_dir.resolve()}")
+
+
+# ==============================================================================
+# MAIN TEST RUN
+# ==============================================================================
 
 def run_test_11():
 
@@ -518,36 +816,66 @@ def run_test_11():
     # PARAMETERS
     # ==========================================================================
 
-    Q = 1000
+    # Requested setup:
+    #
+    #   requested Q = 2000
+    #   terminal fragments = 2048
+    #
+    # Strict injective assignment requires:
+    #
+    #   Q >= k >= m
+    #
+    # Therefore, the effective Q is automatically raised to 2048 in order to
+    # preserve the one-fragment / one-verifier assumption instead of silently
+    # breaking the model.
+    Q_REQUESTED = 2000
+    TERMINAL_FRAGMENTS = 2048
+    Q = max(Q_REQUESTED, TERMINAL_FRAGMENTS)
+
     H_MIN = 1.0
-    ITERATIONS = 20_000
-    SEED = 42
+    ITERATIONS = 100_000
+    SEED_BASE = 42
 
-    Q_SCENARIOS = [0.60, 0.80, 0.90]
-
-    M_VALUES = [
-        1, 2, 3, 5, 8, 12, 16,
-        24, 32, 48, 64, 96, 128
+    Q_SCENARIOS = [
+        0.33, 0.40, 0.45, 0.50,
+        0.55, 0.60, 0.65, 0.70,
+        0.75, 0.80, 0.85, 0.90,
+        0.95, 0.97, 0.98, 0.99
     ]
 
-    # Semantic feasibility warning only.
-    # It does not affect V_G.
-    M_MAX_SEMANTIC = 150
+    M_VALUES = [
+        1, 2, 4, 8, 16, 32,
+        64, 128, 256, 512, 1024, 2048
+    ]
 
-    rng = np.random.default_rng(SEED)
+    SELECTED_Q_FOR_CURVES = [0.50, 0.70, 0.90, 0.99]
+
+    OUT_DIR = Path("figures/test_11")
 
     results = {}
 
     print("\nCNVS Test 11: Executable Fragmentation Sensitivity Test")
     print("-------------------------------------------------------")
-    print(f"Q_verifiers = {Q}")
+    print(f"Q_requested = {Q_REQUESTED}")
+    print(f"Q_effective = {Q}")
+    print(f"terminal_fragments k = {TERMINAL_FRAGMENTS}")
     print(f"h_min = {H_MIN}")
     print(f"iterations per point = {ITERATIONS}")
+    print(f"seed base = {SEED_BASE}")
+    print(f"q scenarios = {Q_SCENARIOS}")
     print(f"m values = {M_VALUES}")
     print("V_G acceptance is computed by executing V_L -> Cons_R -> Inv_C -> V_G.")
-    print("The analytical formula is shown only as a reference.\n")
+    print("Exact and theorem references are shown only as comparison curves.")
+    print("Formula: theorem_ref = [q + (1 - q) * 2^(-h_min)]^m\n")
 
-    for q in Q_SCENARIOS:
+    if Q != Q_REQUESTED:
+        print("[Injective Assignment Notice]")
+        print(
+            f"Requested Q={Q_REQUESTED} is smaller than terminal_fragments={TERMINAL_FRAGMENTS}. "
+            f"Effective Q has been raised to {Q} to preserve injective assignment.\n"
+        )
+
+    for q_index, q in enumerate(Q_SCENARIOS):
 
         rows = []
 
@@ -559,19 +887,22 @@ def run_test_11():
 
         for m in M_VALUES:
 
+            rng = make_point_rng(SEED_BASE, q_index, m)
+
             out = simulate_one_m(
                 Q=Q,
                 q=q,
                 m=m,
                 h_min=H_MIN,
                 iterations=ITERATIONS,
-                rng=rng
+                rng=rng,
+                terminal_fragments=TERMINAL_FRAGMENTS,
             )
 
             rows.append(out)
 
             print(
-                f"{m:3d} | {out['k']:3d} | "
+                f"{m:4d} | {out['k']:4d} | "
                 f"{out['VG_accept_ordinary']:.8f} | "
                 f"{out['local_pass_global_veto']:.8f} | "
                 f"{out['exact_injective_reference']:.8f} | "
@@ -581,104 +912,21 @@ def run_test_11():
 
         results[q] = rows
 
-    # ==========================================================================
-    # PLOT 1: EXECUTABLE V_G ACCEPTANCE
-    # ==========================================================================
-
-    floor = 1.0 / ITERATIONS
-
-    plt.figure(figsize=(12, 7))
-
-    for q, rows in results.items():
-
-        m_axis = np.array([r["m"] for r in rows])
-        empirical = np.array([r["VG_accept_ordinary"] for r in rows])
-        exact_ref = np.array([r["exact_injective_reference"] for r in rows])
-
-        plt.plot(
-            m_axis,
-            np.maximum(empirical, floor),
-            marker="o",
-            label=f"Executable V_G acceptance, q={q:.2f}"
-        )
-
-        plt.plot(
-            m_axis,
-            np.maximum(exact_ref, floor),
-            linestyle="--",
-            label=f"Exact injective reference, q={q:.2f}"
-        )
-
-    plt.axvline(
-        M_MAX_SEMANTIC,
-        linestyle=":",
-        linewidth=2,
-        label=f"semantic warning m_max = {M_MAX_SEMANTIC}"
+    plot_test11_comparisons(
+        results=results,
+        iterations=ITERATIONS,
+        out_dir=OUT_DIR,
+        selected_q_for_curves=SELECTED_Q_FOR_CURVES,
+        show_plots=True,
     )
 
-    plt.yscale("log")
-    plt.xlabel("Critical fragmentation cardinality m")
-    plt.ylabel("Unauthorized reconstruction / V_G acceptance probability")
-    plt.title(
-        f"CNVS Test 11: Fragmentation Depth vs Executable V_G Acceptance "
-        f"(h_min={H_MIN})"
-    )
-    plt.grid(True, which="both", linestyle="--", linewidth=0.5, alpha=0.65)
-    plt.legend(fontsize=9)
-    plt.tight_layout()
-
-    # Uncomment for publication export.
-    # plt.savefig(
-    #     "cnvs_test11_fragmentation_sensitivity_vg_acceptance.pdf",
-    #     format="pdf",
-    #     dpi=300
-    # )
-
-    plt.show()
-
-    # ==========================================================================
-    # PLOT 2: LOCAL VALIDITY BUT GLOBAL VETO
-    # ==========================================================================
-
-    plt.figure(figsize=(12, 7))
-
-    for q, rows in results.items():
-
-        m_axis = np.array([r["m"] for r in rows])
-        veto_signal = np.array([r["local_pass_global_veto"] for r in rows])
-
-        plt.plot(
-            m_axis,
-            veto_signal,
-            marker="s",
-            label=f"Local-pass / Global-Veto rate, q={q:.2f}"
-        )
-
-    plt.axvline(
-        M_MAX_SEMANTIC,
-        linestyle=":",
-        linewidth=2,
-        label=f"semantic warning m_max = {M_MAX_SEMANTIC}"
-    )
-
-    plt.xlabel("Critical fragmentation cardinality m")
-    plt.ylabel("Rate of cases where V_L and Cons_R pass but V_G vetoes")
-    plt.title(
-        "CNVS Test 11: Non-Reducibility Signal\n"
-        "Local admissibility passes while hidden C_int binding triggers Global Veto"
-    )
-    plt.grid(True, linestyle="--", linewidth=0.5, alpha=0.65)
-    plt.legend(fontsize=9)
-    plt.tight_layout()
-
-    # Uncomment for publication export.
-    # plt.savefig(
-    #     "cnvs_test11_local_pass_global_veto_rate.pdf",
-    #     format="pdf",
-    #     dpi=300
-    # )
-
-    plt.show()
+    print("\n================ FINAL INTERPRETATION ================\n")
+    print("- Test 11 was executed through V_L -> Cons_R -> Inv_C -> V_G.")
+    print("- Exact injective and theorem references were used only as comparison curves.")
+    print("- The theorem reference is [q + (1 - q) * 2^(-h_min)]^m.")
+    print("- The exact reference uses the hypergeometric injective-assignment law.")
+    print("- The local-pass / Global-Veto signal measures CNVS non-reducibility.")
+    print("- The C_int leak control confirms the expected upper-bound collapse scenario.")
 
     return results
 
