@@ -25,7 +25,7 @@ from typing import Dict, Any, List, Tuple, Set, Optional
 import matplotlib.pyplot as plt
 
 # ==============================================================================
-# Test 10 - Advanced Hybrid Structural-Monte Carlo Adversarial Model (Full-Coverage Structural-Semantic Consistency).
+# Test Name: Test 10 - Advanced Hybrid Structural-Monte Carlo Adversarial Model (Full-Coverage Structural-Semantic Consistency).
 # filename = "test_10_full_structural_semantic_model.py"
 #
 # PURPOSE:
