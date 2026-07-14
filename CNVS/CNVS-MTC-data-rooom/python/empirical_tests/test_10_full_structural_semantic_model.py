@@ -25,7 +25,7 @@ from typing import Dict, Any, List, Tuple, Set, Optional
 import matplotlib.pyplot as plt
 
 # ==============================================================================
-# Test Name: Test 10 - Advanced Execution Environment (Full Structural-Semantic Model).
+# Test 10 - Advanced Hybrid Structural-Monte Carlo Adversarial Model (Full-Coverage Structural-Semantic Consistency).
 # filename = "test_10_full_structural_semantic_model.py"
 #
 # PURPOSE:
