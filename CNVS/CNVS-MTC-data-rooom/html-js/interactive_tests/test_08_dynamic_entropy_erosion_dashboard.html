@@ -13,236 +13,1112 @@ Academic review and technical due diligence use are permitted under the license.
 SPDX-License-Identifier: CC-BY-NC-4.0
 ==============================================================================
 -->
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!--
+    Test Name:
+    Test 8 - Interactive Deterministic Stress Exploration of q-Dependent
+             Residual Min-Entropy Erosion.
 
-    <!-- Test Name: Test 8 - Interactive Projection (Stress Test) of Dynamic Min-Entropy Erosion. -->
-    <!-- filename = "test_08_dynamic_entropy_erosion_dashboard.html" -->
-    
+    filename = "test_08_dynamic_entropy_erosion_dashboard.html"
+
+    CLASSIFICATION:
+    This file is an interactive deterministic analytical dashboard.
+    It is not a Monte Carlo simulation, an empirical validation, a temporal
+    entropy process, or an independent proof of CNVS.
+
+    PURPOSE:
+    The dashboard explores how three heuristic q-dependent residual min-entropy
+    profiles propagate through the CNVS Theorem 4 reconstruction upper bound.
+
+    HEURISTIC EROSION PROFILES:
+        linear:    h_1(q) = h_max (1-q)
+        quadratic: h_2(q) = h_max (1-q)^2
+        quartic:   h_4(q) = h_max (1-q)^4
+
+    These profiles are sensitivity assumptions. They are not asserted as
+    universal CNVS laws or as measured leakage dynamics.
+
+    WORST-CASE SATURATION:
+    The formal inference relation is:
+        p_inf <= 2^(-h_res)
+
+    This dashboard deliberately uses:
+        p_inf = 2^(-h_res)
+
+    granting the attacker the strongest inference probability admitted by the
+    selected residual min-entropy profile.
+
+    THEOREM 4 UPPER BOUND:
+        B_T4,a(q) = [q + (1-q) 2^(-h_a(q))]^m
+
+    The curves are upper bounds, not exact probabilities of unauthorized
+    reconstruction.
+
+    NUMERICAL REPRESENTATION:
+    The dashboard plots log10(B_T4,a) directly. No artificial probability floor
+    is used, so extremely small bounds remain distinguishable without underflow.
+
+    SECURITY TARGET:
+    For a selected eta, the dashboard deterministically finds the largest q
+    satisfying B_T4,a(q) <= eta for each profile by bisection.
+
+    BFT REFERENCE:
+    The optional q=0.33 marker is only an illustrative classical BFT reference.
+    It is not a CNVS threshold.
+    -->
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CNVS Interactive: Dynamic Erosion of Residual Min-Entropy</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <title>CNVS Interactive Entropy-Erosion Stress Explorer</title>
+
+    <!-- Pinned dependency version for reproducibility. -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
     <style>
         :root {
             --bg-color: #0d1117;
             --panel-bg: #161b22;
+            --panel-soft: #0d1117;
             --text-main: #c9d1d9;
+            --text-muted: #8b949e;
             --text-accent: #58a6ff;
             --border-color: #30363d;
+            --linear: #2ea043;
+            --quadratic: #d29922;
+            --quartic: #f85149;
+            --target: #a371f7;
+            --warning: #f0883e;
         }
+
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-main);
             margin: 0;
             padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
         }
+
         .container {
-            max-width: 1000px;
-            width: 100%;
+            max-width: 1180px;
+            margin: 0 auto;
             background-color: var(--panel-bg);
             border: 1px solid var(--border-color);
-            border-radius: 8px;
+            border-radius: 10px;
             padding: 24px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
         }
+
         h1 {
             color: var(--text-accent);
             text-align: center;
-            font-size: 1.5rem;
-            margin-top: 0;
-            border-bottom: 1px solid var(--border-color);
+            font-size: 1.55rem;
+            margin: 0;
             padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
         }
+
+        .subtitle {
+            color: var(--text-muted);
+            text-align: center;
+            margin: 12px 0 22px;
+            line-height: 1.45;
+            font-size: 0.92rem;
+        }
+
         .controls {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-            background-color: #0d1117;
-            padding: 16px;
-            border-radius: 6px;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+            padding: 18px;
+            background-color: var(--panel-soft);
             border: 1px solid var(--border-color);
+            border-radius: 8px;
         }
+
         .control-group {
             display: flex;
             flex-direction: column;
+            min-width: 0;
         }
+
         label {
-            font-size: 0.9rem;
-            font-weight: 600;
+            font-size: 0.88rem;
+            font-weight: 650;
             margin-bottom: 8px;
             display: flex;
             justify-content: space-between;
+            gap: 12px;
         }
-        .val-display { color: var(--text-accent); }
-        input[type="range"] { width: 100%; cursor: pointer; }
-        .chart-container { position: relative; height: 500px; width: 100%; }
+
+        .value-display {
+            color: var(--text-accent);
+            white-space: nowrap;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+        }
+
+        .checkbox-row {
+            display: flex;
+            align-items: center;
+            min-height: 36px;
+            gap: 9px;
+            color: var(--text-main);
+            font-size: 0.88rem;
+        }
+
+        .checkbox-row input {
+            width: 17px;
+            height: 17px;
+            cursor: pointer;
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: 12px;
+            margin: 18px 0;
+        }
+
+        .metric-card {
+            border: 1px solid var(--border-color);
+            background: var(--panel-soft);
+            border-radius: 7px;
+            padding: 13px 14px;
+            min-height: 82px;
+        }
+
+        .metric-label {
+            color: var(--text-muted);
+            font-size: 0.78rem;
+            line-height: 1.3;
+        }
+
+        .metric-value {
+            color: var(--text-main);
+            font-size: 1.08rem;
+            font-weight: 700;
+            margin-top: 6px;
+            word-break: break-word;
+        }
+
+        .metric-value.linear {
+            color: var(--linear);
+        }
+
+        .metric-value.quadratic {
+            color: var(--quadratic);
+        }
+
+        .metric-value.quartic {
+            color: var(--quartic);
+        }
+
+        .alert {
+            display: none;
+            margin: 16px 0;
+            border: 1px solid var(--warning);
+            background: rgba(240, 136, 62, 0.12);
+            color: #ffa657;
+            border-radius: 7px;
+            padding: 12px 14px;
+            font-size: 0.9rem;
+            line-height: 1.45;
+        }
+
+        .chart-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        .chart-panel {
+            background: var(--panel-soft);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 14px;
+        }
+
+        .chart-title {
+            color: var(--text-main);
+            font-weight: 700;
+            margin: 0 0 8px;
+            font-size: 1rem;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 440px;
+            width: 100%;
+        }
+
         .explanation {
-            font-size: 0.85rem;
-            color: #8b949e;
-            margin-top: 20px;
-            line-height: 1.5;
-            text-align: justify;
+            color: var(--text-muted);
+            margin-top: 22px;
+            line-height: 1.6;
+            font-size: 0.86rem;
+        }
+
+        .formula {
+            display: block;
+            margin: 8px 0;
+            padding: 9px 11px;
+            background: var(--panel-soft);
+            border-left: 3px solid var(--text-accent);
+            color: var(--text-main);
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            overflow-x: auto;
+        }
+
+        @media (min-width: 1050px) {
+            .chart-grid {
+                grid-template-columns: 1fr 1fr;
+            }
         }
     </style>
 </head>
-<body>
 
+<body>
 <div class="container">
-    <h1>CNVS Interactive Stress Test: Dynamic Erosion of Residual Min-Entropy</h1>
-    
+    <h1>CNVS Interactive Entropy-Erosion Stress Explorer</h1>
+
+    <div class="subtitle">
+        Deterministic q-dependent stress exploration of heuristic residual
+        min-entropy erosion and the resulting Theorem 4 reconstruction upper bounds.
+    </div>
+
     <div class="controls">
         <div class="control-group">
-            <label>Critical Fragments (m): <span id="m_val" class="val-display">50</span></label>
-            <input type="range" id="m" min="1" max="100" step="1" value="50" oninput="updateChart()">
+            <label>
+                Critical Fragments (m)
+                <span id="m_val" class="value-display">50</span>
+            </label>
+            <input type="range" id="m" min="1" max="200" step="1" value="50">
         </div>
-        
+
         <div class="control-group">
-            <label>Initial Min-Entropy (h_max): <span id="h_max_val" class="val-display">10.0</span></label>
-            <input type="range" id="h_max" min="0" max="20" step="0.1" value="10.0" oninput="updateChart()">
+            <label>
+                Initial Residual Min-Entropy (h_max)
+                <span id="h_max_val" class="value-display">10.0</span>
+            </label>
+            <input type="range" id="h_max" min="0" max="20" step="0.1" value="10.0">
+        </div>
+
+        <div class="control-group">
+            <label>
+                Security Target Exponent
+                <span id="eta_exp_val" class="value-display">η = 1e-6</span>
+            </label>
+            <input type="range" id="eta_exp" min="1" max="30" step="1" value="6">
+        </div>
+
+        <div class="control-group">
+            <label>Reference Marker</label>
+            <div class="checkbox-row">
+                <input type="checkbox" id="show_bft" checked>
+                <span>Show illustrative classical BFT reference at q = 0.33</span>
+            </div>
         </div>
     </div>
 
-    <div class="chart-container">
-        <canvas id="erosionChart"></canvas>
+    <div id="security_alert" class="alert"></div>
+
+    <div class="metrics">
+        <div class="metric-card">
+            <div class="metric-label">Common upper bound at q = 0</div>
+            <div id="metric_q0" class="metric-value">—</div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-label">Linear-profile q_max</div>
+            <div id="metric_qmax_linear" class="metric-value linear">—</div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-label">Quadratic-profile q_max</div>
+            <div id="metric_qmax_quadratic" class="metric-value quadratic">—</div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-label">Quartic-profile q_max</div>
+            <div id="metric_qmax_quartic" class="metric-value quartic">—</div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-label">Residual entropies at q = 0.50</div>
+            <div id="metric_h50" class="metric-value">—</div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-label">Total-collusion control at q = 1</div>
+            <div id="metric_q1" class="metric-value">All bounds = 1</div>
+        </div>
+    </div>
+
+    <div class="chart-grid">
+        <div class="chart-panel">
+            <div class="chart-title">
+                q-dependent residual min-entropy profiles
+            </div>
+            <div class="chart-container">
+                <canvas id="entropyChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-panel">
+            <div class="chart-title">
+                log10 of Theorem 4 reconstruction upper bounds
+            </div>
+            <div class="chart-container">
+                <canvas id="boundChart"></canvas>
+            </div>
+        </div>
     </div>
 
     <div class="explanation">
-        <strong>Mathematical Model (Heuristic Erosion):</strong> This dashboard acts as an interactive stress test. It projects the Systemic Reconstruction Probability assuming that the expansion of colluding nodes (<em>q</em>) causes a dynamic depletion of the cryptographic Min-Entropy. The three curves model increasingly severe degradation profiles (Linear, Quadratic, Radical). The interface illustrates the sensitivity of reconstruction probability to critical-fragment cardinality (<em>m</em>) under severe heuristic metadata-leakage assumptions.
+        <strong>Heuristic stress profiles.</strong>
+        The dashboard assumes:
+        <span class="formula">
+            h_1(q)=h_max(1-q),  h_2(q)=h_max(1-q)^2,  h_4(q)=h_max(1-q)^4
+        </span>
+
+        and propagates each profile through:
+        <span class="formula">
+            B_T4,a(q) = [q + (1-q) 2^(-h_a(q))]^m
+        </span>
+
+        The three curves are deterministic upper bounds, not exact reconstruction
+        probabilities. The profiles are exploratory sensitivity assumptions and
+        do not represent measured leakage laws or temporal entropy dynamics.
+        Increasing q simultaneously raises direct compromise exposure and erodes
+        the assumed residual entropy margin; this is a compound adversarial stress
+        assumption.
+
+        For each profile, q_max is the largest colluding fraction satisfying:
+        <span class="formula">
+            B_T4,a(q) <= eta
+        </span>
+
+        It is found by deterministic bisection. At q=0 all profiles coincide.
+        At q=1 all bounds equal one. The optional 33% marker is only a classical
+        BFT reference and is not a CNVS threshold.
     </div>
 </div>
 
 <script>
-    const ctx = document.getElementById('erosionChart').getContext('2d');
-    let erosionChart;
-    const labels = Array.from({length: 101}, (_, i) => (i / 100).toFixed(2));
+    "use strict";
 
-    const verticalLinePlugin = {
-        id: 'verticalLine',
-        beforeDraw: chart => {
-            const xAxis = chart.scales.x;
-            const yAxis = chart.scales.y;
-            // CORRECTED: getPixelForValue maps directly to the data array index
-            const xPixel = xAxis.getPixelForValue(33); 
+    const entropyContext = document
+        .getElementById("entropyChart")
+        .getContext("2d");
 
-            chart.ctx.save();
-            chart.ctx.beginPath();
-            chart.ctx.moveTo(xPixel, yAxis.top);
-            chart.ctx.lineTo(xPixel, yAxis.bottom);
-            chart.ctx.lineWidth = 2;
-            chart.ctx.strokeStyle = '#8b949e';
-            chart.ctx.setLineDash([5, 5]);
-            chart.ctx.stroke();
-            
-            chart.ctx.fillStyle = '#8b949e';
-            chart.ctx.font = '12px sans-serif';
-            chart.ctx.fillText('BFT Tolerance Threshold (33%)', xPixel + 8, yAxis.top + 15);
-            chart.ctx.restore();
+    const boundContext = document
+        .getElementById("boundChart")
+        .getContext("2d");
+
+    let entropyChart;
+    let boundChart;
+
+    const PROFILE_DEFINITIONS = [
+        {
+            key: "linear",
+            exponent: 1,
+            label: "Linear erosion",
+            color: "#2ea043"
+        },
+        {
+            key: "quadratic",
+            exponent: 2,
+            label: "Quadratic accelerated erosion",
+            color: "#d29922"
+        },
+        {
+            key: "quartic",
+            exponent: 4,
+            label: "Quartic accelerated erosion",
+            color: "#f85149"
+        }
+    ];
+
+    let markerState = {
+        showBft: true,
+        qMaxValues: {}
+    };
+
+    const referenceMarkerPlugin = {
+        id: "referenceMarkers",
+
+        beforeDatasetsDraw(chart) {
+            const {ctx, chartArea, scales} = chart;
+
+            if (!chartArea || !scales.x) {
+                return;
+            }
+
+            ctx.save();
+
+            if (markerState.showBft) {
+                const xBft = scales.x.getPixelForValue(0.33);
+
+                ctx.beginPath();
+                ctx.moveTo(xBft, chartArea.top);
+                ctx.lineTo(xBft, chartArea.bottom);
+                ctx.lineWidth = 1.3;
+                ctx.strokeStyle = "#8b949e";
+                ctx.setLineDash([4, 5]);
+                ctx.stroke();
+
+                ctx.setLineDash([]);
+                ctx.fillStyle = "#8b949e";
+                ctx.font = "10.5px sans-serif";
+                ctx.fillText(
+                    "Classical BFT reference — not a CNVS threshold",
+                    Math.min(xBft + 6, chartArea.right - 245),
+                    chartArea.bottom - 10
+                );
+            }
+
+            if (chart.canvas.id === "boundChart") {
+                PROFILE_DEFINITIONS.forEach((profile, index) => {
+                    const qMax = markerState.qMaxValues[profile.key];
+
+                    if (
+                        qMax === null ||
+                        qMax === undefined ||
+                        qMax < 0 ||
+                        qMax > 1
+                    ) {
+                        return;
+                    }
+
+                    const x = scales.x.getPixelForValue(qMax);
+
+                    ctx.beginPath();
+                    ctx.moveTo(x, chartArea.top);
+                    ctx.lineTo(x, chartArea.bottom);
+                    ctx.lineWidth = 1.5;
+                    ctx.strokeStyle = profile.color;
+                    ctx.setLineDash([6, 5]);
+                    ctx.stroke();
+
+                    ctx.setLineDash([]);
+                    ctx.fillStyle = profile.color;
+                    ctx.font = "10.5px sans-serif";
+                    ctx.fillText(
+                        `${profile.key} q_max=${qMax.toFixed(3)}`,
+                        Math.min(x + 5, chartArea.right - 125),
+                        chartArea.top + 15 + index * 15
+                    );
+                });
+            }
+
+            ctx.restore();
         }
     };
 
-    function initChart() {
-        erosionChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [
-                    {
-                        label: 'Linear Erosion (Proportional Decay)',
-                        data: [],
-                        borderColor: '#2ea043',
-                        borderWidth: 2,
-                        pointRadius: 0,
-                        tension: 0.4
-                    },
-                    {
-                        label: 'Quadratic Erosion (Accelerated Decay)',
-                        data: [],
-                        borderColor: '#d29922',
-                        borderWidth: 2,
-                        pointRadius: 0,
-                        tension: 0.4
-                    },
-                    {
-                        label: 'Radical Erosion (Massive Exfiltration)',
-                        data: [],
-                        borderColor: '#f85149',
-                        borderWidth: 2,
-                        pointRadius: 0,
-                        tension: 0.4
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        title: { display: true, text: 'Fraction of Colluding Verifiers (q)', color: '#8b949e' },
-                        grid: { color: '#30363d' },
-                        ticks: { color: '#c9d1d9', maxTicksLimit: 11 }
-                    },
-                    y: {
-                        type: 'logarithmic',
-                        min: 1e-10,
-                        max: 1,
-                        title: { display: true, text: 'Probability P(Rec*) - Logarithmic Scale', color: '#8b949e' },
-                        grid: { color: '#30363d' },
-                        ticks: { color: '#c9d1d9' }
-                    }
-                },
-                plugins: {
-                    legend: { labels: { color: '#c9d1d9' } }
-                }
-            },
-            plugins: [verticalLinePlugin]
+    function log10(value) {
+        return Math.log(value) / Math.LN10;
+    }
+
+    function residualEntropy(q, hMax, erosionExponent) {
+        return hMax * Math.pow(1 - q, erosionExponent);
+    }
+
+    function log10UpperBound(q, hMax, m, erosionExponent) {
+        const hResidual = residualEntropy(
+            q,
+            hMax,
+            erosionExponent
+        );
+
+        const pInf = Math.pow(2, -hResidual);
+        const pComp = q + (1 - q) * pInf;
+
+        if (pComp === 0) {
+            return Number.NEGATIVE_INFINITY;
+        }
+
+        return m * log10(pComp);
+    }
+
+    function formatFromLog10(logValue) {
+        if (!Number.isFinite(logValue)) {
+            return "0";
+        }
+
+        if (Math.abs(logValue) < 1e-12) {
+            return "1";
+        }
+
+        if (logValue > -5) {
+            return Math.pow(10, logValue).toPrecision(6);
+        }
+
+        if (logValue >= -300) {
+            return Math.pow(10, logValue).toExponential(3);
+        }
+
+        return `10^(${logValue.toFixed(2)})`;
+    }
+
+    function findMaximumFeasibleQ(
+        hMax,
+        m,
+        eta,
+        erosionExponent
+    ) {
+        const logEta = log10(eta);
+        const logAtZero = log10UpperBound(
+            0,
+            hMax,
+            m,
+            erosionExponent
+        );
+
+        if (logAtZero > logEta + 1e-12) {
+            return null;
+        }
+
+        const logAtOne = log10UpperBound(
+            1,
+            hMax,
+            m,
+            erosionExponent
+        );
+
+        if (logAtOne <= logEta) {
+            return 1;
+        }
+
+        let low = 0;
+        let high = 1;
+
+        for (let iteration = 0; iteration < 100; iteration++) {
+            const middle = (low + high) / 2;
+            const logAtMiddle = log10UpperBound(
+                middle,
+                hMax,
+                m,
+                erosionExponent
+            );
+
+            if (logAtMiddle <= logEta) {
+                low = middle;
+            } else {
+                high = middle;
+            }
+        }
+
+        return low;
+    }
+
+    function verifyMathematicalConsistency(
+        hMax,
+        m,
+        sampledQValues
+    ) {
+        const tolerance = 1e-10;
+
+        const q0Values = PROFILE_DEFINITIONS.map((profile) =>
+            log10UpperBound(
+                0,
+                hMax,
+                m,
+                profile.exponent
+            )
+        );
+
+        if (
+            Math.max(...q0Values) -
+            Math.min(...q0Values) >
+            tolerance
+        ) {
+            throw new Error(
+                "The erosion profiles do not coincide at q=0."
+            );
+        }
+
+        const q1Values = PROFILE_DEFINITIONS.map((profile) =>
+            log10UpperBound(
+                1,
+                hMax,
+                m,
+                profile.exponent
+            )
+        );
+
+        if (
+            q1Values.some(
+                (value) => Math.abs(value) > tolerance
+            )
+        ) {
+            throw new Error(
+                "All upper bounds must equal one at q=1."
+            );
+        }
+
+        sampledQValues.forEach((q) => {
+            const linear = log10UpperBound(
+                q,
+                hMax,
+                m,
+                1
+            );
+
+            const quadratic = log10UpperBound(
+                q,
+                hMax,
+                m,
+                2
+            );
+
+            const quartic = log10UpperBound(
+                q,
+                hMax,
+                m,
+                4
+            );
+
+            if (
+                linear > quadratic + tolerance ||
+                quadratic > quartic + tolerance
+            ) {
+                throw new Error(
+                    "Expected upper-bound ordering was violated."
+                );
+            }
         });
     }
 
-    function calculateProb(q, h, m) {
-        const p_inf = Math.pow(2, -h);
-        const p_comp = q + (1 - q) * p_inf;
-        return Math.max(Math.pow(p_comp, m), 1e-10);
+    function initializeCharts() {
+        entropyChart = new Chart(entropyContext, {
+            type: "line",
+
+            data: {
+                datasets: PROFILE_DEFINITIONS.map((profile) => ({
+                    label: profile.label,
+                    data: [],
+                    parsing: false,
+                    borderColor: profile.color,
+                    backgroundColor: profile.color,
+                    borderWidth: 2.3,
+                    pointRadius: 0,
+                    fill: false,
+                    tension: 0
+                }))
+            },
+
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+
+                interaction: {
+                    mode: "nearest",
+                    intersect: false
+                },
+
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: "#c9d1d9"
+                        }
+                    },
+
+                    tooltip: {
+                        callbacks: {
+                            title(items) {
+                                return items.length
+                                    ? `q = ${items[0].parsed.x.toFixed(3)}`
+                                    : "";
+                            },
+
+                            label(context) {
+                                return (
+                                    ` ${context.dataset.label}: ` +
+                                    `${context.parsed.y.toFixed(6)} bits`
+                                );
+                            }
+                        }
+                    }
+                },
+
+                scales: {
+                    x: {
+                        type: "linear",
+                        min: 0,
+                        max: 1,
+
+                        title: {
+                            display: true,
+                            text: "Fraction of colluding verifiers (q)",
+                            color: "#8b949e"
+                        },
+
+                        grid: {
+                            color: "#30363d"
+                        },
+
+                        ticks: {
+                            color: "#c9d1d9",
+                            stepSize: 0.1,
+                            callback: (value) => Number(value).toFixed(1)
+                        }
+                    },
+
+                    y: {
+                        min: 0,
+
+                        title: {
+                            display: true,
+                            text: "Assumed residual min-entropy h_res(q) [bits]",
+                            color: "#8b949e"
+                        },
+
+                        grid: {
+                            color: "#30363d"
+                        },
+
+                        ticks: {
+                            color: "#c9d1d9"
+                        }
+                    }
+                }
+            },
+
+            plugins: [referenceMarkerPlugin]
+        });
+
+        boundChart = new Chart(boundContext, {
+            type: "line",
+
+            data: {
+                datasets: [
+                    ...PROFILE_DEFINITIONS.map((profile) => ({
+                        label: `${profile.label}: log10 upper bound`,
+                        data: [],
+                        parsing: false,
+                        borderColor: profile.color,
+                        backgroundColor: profile.color,
+                        borderWidth: 2.3,
+                        pointRadius: 0,
+                        fill: false,
+                        tension: 0
+                    })),
+
+                    {
+                        label: "Security target log10(η)",
+                        data: [],
+                        parsing: false,
+                        borderColor: "#a371f7",
+                        backgroundColor: "#a371f7",
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        borderDash: [8, 5],
+                        fill: false,
+                        tension: 0
+                    }
+                ]
+            },
+
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+
+                interaction: {
+                    mode: "nearest",
+                    intersect: false
+                },
+
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: "#c9d1d9"
+                        }
+                    },
+
+                    tooltip: {
+                        callbacks: {
+                            title(items) {
+                                return items.length
+                                    ? `q = ${items[0].parsed.x.toFixed(3)}`
+                                    : "";
+                            },
+
+                            label(context) {
+                                const logValue = context.parsed.y;
+
+                                if (context.datasetIndex < 3) {
+                                    return (
+                                        ` ${context.dataset.label}: ` +
+                                        `${formatFromLog10(logValue)} ` +
+                                        `[log10=${logValue.toFixed(3)}]`
+                                    );
+                                }
+
+                                return (
+                                    ` Target η: ${formatFromLog10(logValue)}`
+                                );
+                            }
+                        }
+                    }
+                },
+
+                scales: {
+                    x: {
+                        type: "linear",
+                        min: 0,
+                        max: 1,
+
+                        title: {
+                            display: true,
+                            text: "Fraction of colluding verifiers (q)",
+                            color: "#8b949e"
+                        },
+
+                        grid: {
+                            color: "#30363d"
+                        },
+
+                        ticks: {
+                            color: "#c9d1d9",
+                            stepSize: 0.1,
+                            callback: (value) => Number(value).toFixed(1)
+                        }
+                    },
+
+                    y: {
+                        type: "linear",
+                        max: 0,
+
+                        title: {
+                            display: true,
+                            text: "log10 of Theorem 4 upper bound",
+                            color: "#8b949e"
+                        },
+
+                        grid: {
+                            color: "#30363d"
+                        },
+
+                        ticks: {
+                            color: "#c9d1d9",
+                            callback: (value) =>
+                                `10^${Number(value).toFixed(0)}`
+                        }
+                    }
+                }
+            },
+
+            plugins: [referenceMarkerPlugin]
+        });
     }
 
-    function updateChart() {
-        const m = parseInt(document.getElementById('m').value);
-        const h_max = parseFloat(document.getElementById('h_max').value);
+    function updateDashboard() {
+        const m = Number.parseInt(
+            document.getElementById("m").value,
+            10
+        );
 
-        document.getElementById('m_val').innerText = m;
-        document.getElementById('h_max_val').innerText = h_max.toFixed(1);
+        const hMax = Number.parseFloat(
+            document.getElementById("h_max").value
+        );
 
-        const dataLinear = [];
-        const dataQuadratic = [];
-        const dataRadical = [];
+        const etaExponent = Number.parseInt(
+            document.getElementById("eta_exp").value,
+            10
+        );
 
-        for (let i = 0; i <= 100; i++) {
-            const q = i / 100;
-            
-            const h_linear = h_max * (1 - q);
-            const h_quad = h_max * Math.pow((1 - q), 2);
-            const h_rad = h_max * Math.pow((1 - q), 4);
+        const showBft = document
+            .getElementById("show_bft")
+            .checked;
 
-            dataLinear.push(calculateProb(q, h_linear, m));
-            dataQuadratic.push(calculateProb(q, h_quad, m));
-            dataRadical.push(calculateProb(q, h_rad, m));
+        if (
+            !Number.isInteger(m) ||
+            m <= 0 ||
+            !Number.isFinite(hMax) ||
+            hMax < 0 ||
+            !Number.isInteger(etaExponent) ||
+            etaExponent <= 0
+        ) {
+            throw new Error("Invalid dashboard parameter state.");
         }
 
-        erosionChart.data.datasets[0].data = dataLinear;
-        erosionChart.data.datasets[1].data = dataQuadratic;
-        erosionChart.data.datasets[2].data = dataRadical;
-        erosionChart.update();
+        const eta = Math.pow(10, -etaExponent);
+        const logEta = -etaExponent;
+        const sampleCount = 500;
+
+        const qValues = Array.from(
+            {length: sampleCount + 1},
+            (_, index) => index / sampleCount
+        );
+
+        verifyMathematicalConsistency(
+            hMax,
+            m,
+            qValues
+        );
+
+        const entropyDatasets = {};
+        const boundDatasets = {};
+        const qMaxValues = {};
+
+        PROFILE_DEFINITIONS.forEach((profile) => {
+            entropyDatasets[profile.key] = qValues.map((q) => ({
+                x: q,
+                y: residualEntropy(
+                    q,
+                    hMax,
+                    profile.exponent
+                )
+            }));
+
+            boundDatasets[profile.key] = qValues.map((q) => ({
+                x: q,
+                y: log10UpperBound(
+                    q,
+                    hMax,
+                    m,
+                    profile.exponent
+                )
+            }));
+
+            qMaxValues[profile.key] = findMaximumFeasibleQ(
+                hMax,
+                m,
+                eta,
+                profile.exponent
+            );
+        });
+
+        const targetData = qValues.map((q) => ({
+            x: q,
+            y: logEta
+        }));
+
+        markerState = {
+            showBft,
+            qMaxValues
+        };
+
+        document.getElementById("m_val").textContent =
+            m.toLocaleString();
+
+        document.getElementById("h_max_val").textContent =
+            hMax.toFixed(1);
+
+        document.getElementById("eta_exp_val").textContent =
+            `η = 1e-${etaExponent}`;
+
+        const commonLogAtQ0 = log10UpperBound(
+            0,
+            hMax,
+            m,
+            1
+        );
+
+        document.getElementById("metric_q0").textContent =
+            formatFromLog10(commonLogAtQ0);
+
+        const qMaxElementIds = {
+            linear: "metric_qmax_linear",
+            quadratic: "metric_qmax_quadratic",
+            quartic: "metric_qmax_quartic"
+        };
+
+        PROFILE_DEFINITIONS.forEach((profile) => {
+            const qMax = qMaxValues[profile.key];
+
+            document
+                .getElementById(qMaxElementIds[profile.key])
+                .textContent =
+                    qMax === null
+                        ? "No feasible q"
+                        : qMax.toFixed(6);
+        });
+
+        const hLinear50 = residualEntropy(0.5, hMax, 1);
+        const hQuadratic50 = residualEntropy(0.5, hMax, 2);
+        const hQuartic50 = residualEntropy(0.5, hMax, 4);
+
+        document.getElementById("metric_h50").textContent =
+            `L ${hLinear50.toFixed(3)} | ` +
+            `Q ${hQuadratic50.toFixed(3)} | ` +
+            `Q4 ${hQuartic50.toFixed(3)} bits`;
+
+        const alert = document.getElementById("security_alert");
+
+        if (hMax === 0) {
+            alert.style.display = "block";
+            alert.textContent =
+                "Residual non-inferability assumption collapsed: h_max = 0, " +
+                "therefore every erosion profile gives p_inf = p_comp = 1 and " +
+                "no finite m reduces the reconstruction upper bound.";
+        } else if (
+            Object.values(qMaxValues).every(
+                (value) => value === null
+            )
+        ) {
+            alert.style.display = "block";
+            alert.textContent =
+                "The selected security target is not achievable even at q = 0. " +
+                "Increase m, increase h_max, or relax η.";
+        } else {
+            alert.style.display = "none";
+            alert.textContent = "";
+        }
+
+        PROFILE_DEFINITIONS.forEach((profile, index) => {
+            entropyChart.data.datasets[index].data =
+                entropyDatasets[profile.key];
+
+            boundChart.data.datasets[index].data =
+                boundDatasets[profile.key];
+        });
+
+        boundChart.data.datasets[3].data = targetData;
+
+        entropyChart.options.scales.y.max =
+            Math.max(1, hMax * 1.05);
+
+        const minimumLogValue = Math.min(
+            logEta,
+            ...PROFILE_DEFINITIONS.flatMap((profile) =>
+                boundDatasets[profile.key].map(
+                    (point) => point.y
+                )
+            )
+        );
+
+        boundChart.options.scales.y.min = Math.min(
+            -1,
+            Math.floor(minimumLogValue * 1.05)
+        );
+
+        entropyChart.update();
+        boundChart.update();
     }
 
-    initChart();
-    updateChart();
+    document
+        .querySelectorAll('input[type="range"], input[type="checkbox"]')
+        .forEach((input) => {
+            input.addEventListener("input", updateDashboard);
+            input.addEventListener("change", updateDashboard);
+        });
+
+    initializeCharts();
+    updateDashboard();
 </script>
 </body>
 </html>
