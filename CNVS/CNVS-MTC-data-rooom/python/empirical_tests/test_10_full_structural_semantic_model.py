@@ -11,75 +11,177 @@
 # SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 # ==============================================================================
 
-
-
+import argparse
 import hashlib
+import hmac
 import json
 import math
 import random
 import statistics
+import sys
+from dataclasses import dataclass, replace
 from pathlib import Path
-from dataclasses import dataclass
-from typing import Dict, Any, List, Tuple, Set, Optional
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple
 
 import matplotlib.pyplot as plt
+import numpy as np
+
 
 # ==============================================================================
+# TEST 10 — ADVANCED STRUCTURAL-SEMANTIC ADVERSARIAL MODEL
+#
 # Test Name: Test 10 - Advanced Hybrid Structural-Monte Carlo Adversarial Model (Full-Coverage Structural-Semantic Consistency).
 # filename = "test_10_full_structural_semantic_model.py"
 #
-# PURPOSE:
-# This script is an executable adversarial model for the CNVS framework.
-# It projects the resilience of the Global Veto (V_G) against progressive mass 
-# collusion (up to 100%), incorporating a non-linear cryptographic polynomial 
-# engine, moving target defense (Topological Refresh), and bounded metadata leakage.
+# CLASSIFICATION:
+# This program is an executable hybrid structural / Monte Carlo adversarial
+# model. It is not an empirical proof of CNVS security and does not independently
+# prove the CNVS theorems.
 #
-# FORMAL ASSUMPTIONS:
-#   1. Epistemic Isolation: Strict separation between the trusted global state, 
-#      the local verifier view, and the adversary view.
-#   2. Injective Assignment: Randomized one-to-one assignment of terminal fragments.
-#   3. Moving Target Defense: At each instance, the topology, binding, and hidden 
-#      invariant family C={c_i} are fully refreshed.
-#   4. Non-Linear Constraints: The invariant family evaluates polynomial constraints 
-#      (linear, quadratic, cubic, and pairwise interactions) over a finite field.
-#   5. Dependent Collusion: Metadata leakage propagates through the topology, 
-#      increasing the adversarial inference probability up to a defined cap.
-#   6. Leakage Boundary (Stress Test): A parallel execution evaluates the theoretical 
-#      upper bound by simulating the complete exfiltration of C_int.
+# WHAT IS EXECUTED:
+#   1. Fresh opaque selectors at every verification instance.
+#   2. Randomized injective assignment of terminal fragments to verifiers.
+#   3. Strict local-task / private-global-state separation.
+#   4. Message-bound verifier authentication through an HMAC surrogate.
+#   5. Trusted recomputation of exact local type/domain admissibility.
+#   6. A hidden structural-semantic invariant family covering every fragment.
+#   7. A hidden topology refreshed at every verification instance.
+#   8. One-shot dependent inference whose conditional probability is capped.
+#   9. Blind false-state synthesis followed by actual V_G execution.
+#  10. C_int-disclosure synthesis followed by actual V_G execution.
+#  11. Full structural refresh and stale-evidence rejection.
+#
+# IMPORTANT INTERPRETIVE LIMITS:
+#   - HMAC is a pedagogical authentication surrogate, not a deployed PKI.
+#   - The semantic policies are stylized executable domain rules.
+#   - The topology-leak parameter is an edge-disclosure probability, not the
+#     formal information-theoretic gamma_top quantity.
+#   - The bounded-inference comparison curve is a simplified injective reference,
+#     not a theorem proved by this script.
+#   - Zero observed false acceptances are not interpreted as zero probability.
+#   - Colab/Jupyter kernel arguments are ignored only in notebook execution;
+#     ordinary terminal argument parsing remains strict.
 # ==============================================================================
 
-# ==============================================================================
-# GLOBAL CONSTANTS AND BASIC UTILITIES
-# ==============================================================================
 
 PRIME = 1_000_003
 
-def sha256_text(x: str) -> str:
-    return hashlib.sha256(x.encode("utf-8")).hexdigest()
 
-def rng_token_hex(rnd: random.Random, nbytes: int = 16) -> str:
-    return "".join(f"{rnd.getrandbits(8):02x}" for _ in range(nbytes))
+# ==============================================================================
+# BASIC UTILITIES
+# ==============================================================================
 
-def make_selector(semantic_key: str, salt: str) -> str:
-    return "tau_" + sha256_text(f"{semantic_key}|{salt}")[:12]
+def sha256_text(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
-def make_identity_proof(salt: str, selector: str, instance_id: str, verifier_id: str) -> str:
-    """
-    Identity/instance proof.
-    The observed value is intentionally NOT included to enforce separation 
-    between identity authentication and semantic validity.
-    """
-    return sha256_text(
-        f"salt={salt}|selector={selector}|instance={instance_id}|verifier={verifier_id}"
+
+def rng_token_hex(
+    rnd: random.Random,
+    nbytes: int = 32,
+) -> str:
+    return "".join(
+        f"{rnd.getrandbits(8):02x}"
+        for _ in range(nbytes)
     )
 
-def stable_hidden_feature(value: Any, salt: str) -> int:
+
+def canonical_typed_value(value: Any) -> Dict[str, Any]:
+    if type(value) not in {str, int, float, bool, type(None)}:
+        raise TypeError(
+            "The pedagogical canonicalizer supports primitive JSON values only."
+        )
+
+    return {
+        "python_type": type(value).__qualname__,
+        "value": value,
+    }
+
+
+def make_selector(
+    semantic_key: str,
+    salt: str,
+) -> str:
     """
-    Hidden semantic feature extraction for the polynomial engine.
-    Not exposed in C_pub and not available in the ordinary adversarial view.
+    Produce a 128-bit opaque selector.
     """
-    raw = json.dumps(value, sort_keys=True, ensure_ascii=False)
-    return int(sha256_text(f"{salt}|{raw}")[:12], 16) % PRIME
+    return "tau_" + sha256_text(
+        f"{semantic_key}|{salt}"
+    )[:32]
+
+
+def canonical_evidence_payload(
+    verifier_id: str,
+    selector: str,
+    instance_id: str,
+    observed_value: Any,
+    local_admissible: bool,
+) -> bytes:
+    payload = {
+        "verifier_id": verifier_id,
+        "selector": selector,
+        "instance_id": instance_id,
+        "observed_value": canonical_typed_value(
+            observed_value
+        ),
+        "local_admissible": bool(
+            local_admissible
+        ),
+    }
+
+    return json.dumps(
+        payload,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+
+
+def make_message_signature(
+    verifier_secret: bytes,
+    verifier_id: str,
+    selector: str,
+    instance_id: str,
+    observed_value: Any,
+    local_admissible: bool,
+) -> str:
+    """
+    Authenticate verifier origin, instance binding, and complete message
+    integrity. This does not assert semantic truth.
+    """
+    payload = canonical_evidence_payload(
+        verifier_id=verifier_id,
+        selector=selector,
+        instance_id=instance_id,
+        observed_value=observed_value,
+        local_admissible=local_admissible,
+    )
+
+    return hmac.new(
+        verifier_secret,
+        payload,
+        hashlib.sha256,
+    ).hexdigest()
+
+
+def stable_hidden_feature(
+    value: Any,
+    salt: str,
+) -> int:
+    """
+    Hidden feature used only for the auxiliary finite-field consistency
+    fingerprint. It is not presented as semantic understanding.
+    """
+    raw = json.dumps(
+        canonical_typed_value(value),
+        sort_keys=True,
+        ensure_ascii=False,
+    )
+
+    return int(
+        sha256_text(f"{salt}|{raw}")[:16],
+        16,
+    ) % PRIME
+
 
 # ==============================================================================
 # DATA STRUCTURES
@@ -91,6 +193,7 @@ class DomainSpec:
     typ: type
     values: Tuple[Any, ...]
 
+
 @dataclass(frozen=True)
 class PrivateFragment:
     semantic_key: str
@@ -99,163 +202,683 @@ class PrivateFragment:
     true_value: Any
     domain: DomainSpec
 
+
 @dataclass(frozen=True)
 class LocalTaskView:
+    """
+    Minimal view delivered to one assigned verifier.
+    """
     selector: str
-    type_name: str
-    public_domain_name: str
+    expected_type: type
+    domain_name: str
+    allowed_values: Tuple[Any, ...]
     instance_id: str
     verifier_id: str
+
 
 @dataclass(frozen=True)
 class LocalEvidence:
     selector: str
     observed_value: Any
     local_admissible: bool
-    identity_proof: str
+    signature: str
     instance_id: str
     verifier_id: str
+
 
 @dataclass(frozen=True)
 class PublicInvariantCategory:
     name: str
     description: str
 
+
 @dataclass(frozen=True)
 class HiddenConstraint:
+    """
+    Executable hidden structural-semantic rule.
+
+    params are private instantiated parameters. selectors encode the hidden role
+    binding for the rule.
+    """
     cid: str
+    kind: str
     semantic_group_label: str
+    selectors: Tuple[str, ...]
+    params: Mapping[str, Any]
+
+
+@dataclass(frozen=True)
+class HiddenPolynomialFingerprint:
+    """
+    Auxiliary finite-field consistency fingerprint.
+
+    It supplements the semantic rules but is not called a semantic law.
+    """
+    cid: str
     selectors: Tuple[str, ...]
     feature_salts: Tuple[str, ...]
     linear_coeffs: Tuple[int, ...]
     quadratic_coeffs: Tuple[int, ...]
     pair_coeffs: Tuple[int, ...]
-    cubic_mask: Tuple[int, ...]
     target: int
     modulus: int = PRIME
+
 
 @dataclass
 class PrivateCNVSInstance:
     fragments: Dict[str, PrivateFragment]
-    hidden_salts: Dict[str, str]
+    local_tasks: Dict[str, LocalTaskView]
+
     assignment: Dict[str, str]
-    identity_hashes: Dict[str, str]
+    verifier_secrets: Dict[str, bytes]
+
     instance_id: str
     C_pub: PublicInvariantCategory
-    C_int: List[HiddenConstraint]
+
+    semantic_constraints: List[HiddenConstraint]
+    polynomial_fingerprints: List[HiddenPolynomialFingerprint]
+
     hidden_topology_edges: Set[Tuple[str, str]]
     critical_selectors: Set[str]
 
-@dataclass
+
+@dataclass(frozen=True)
 class AdversaryView:
     selectors: Tuple[str, ...]
-    local_tasks: Dict[str, LocalTaskView]
+    compromised_local_tasks: Mapping[str, LocalTaskView]
     C_pub: PublicInvariantCategory
+
     leaked_metadata_edges: Set[Tuple[str, str]]
-    compromised_values: Dict[str, Any]
-    compromised_proofs: Dict[str, str]
+
+    compromised_values: Mapping[str, Any]
+    compromised_secrets: Mapping[str, bytes]
     compromised_verifiers: Set[str]
+
     C_int_leaked: bool = False
 
-@dataclass
+
+@dataclass(frozen=True)
 class SimulationConfig:
     trials: int = 100_000
     n_verifiers: int = 64
-    coalition_fraction: float = 0.10
-    gamma_top_leak: float = 0.12
+
+    edge_disclosure_probability: float = 0.12
+
     dependent_infer_base: float = 0.015
     dependent_infer_rho: float = 0.35
     p_infer_cap: float = 0.45
     p_identity_after_infer: float = 0.15
+
     blind_attempts: int = 1
-    C_int_leak_probability: float = 0.0
+    leak_solver_attempts: int = 250
+
     seed: int = 42
 
+
 # ==============================================================================
-# DECLARATION AND INVARIANT UNIVERSE
+# DECLARATION AND DOMAIN UNIVERSE
 # ==============================================================================
 
 def default_payload() -> Dict[str, Any]:
     return {
-        "owner_id": "owner_042", "city_code": "MIL", "asset_class": "government",
-        "floor": 3, "area_sqm": 120, "parcel_zone": "Z7", "risk_tier": 6,
-        "clearance_level": 4, "facility_class": "S", "access_count": 48,
-        "device_count": 17, "data_sensitivity": 6, "audit_class": "restricted",
-        "device_firmware_class": "hardened", "network_zone": "segmented",
+        "owner_id": "owner_042",
+        "city_code": "MIL",
+        "asset_class": "government",
+        "floor": 3,
+        "area_sqm": 120,
+        "parcel_zone": "Z7",
+        "risk_tier": 6,
+        "clearance_level": 4,
+        "facility_class": "S",
+        "access_count": 48,
+        "device_count": 17,
+        "data_sensitivity": 6,
+        "audit_class": "restricted",
+        "device_firmware_class": "hardened",
+        "network_zone": "segmented",
         "operator_role": "admin",
     }
 
+
 def domain_specs() -> Dict[str, DomainSpec]:
     return {
-        "owner_id": DomainSpec("private_identifier", str, tuple(f"owner_{i:03d}" for i in range(100))),
-        "city_code": DomainSpec("geo_code", str, ("MIL", "ROM", "TOR", "GEN", "NAP", "BOL", "FIR")),
-        "asset_class": DomainSpec("asset_class", str, ("residential", "industrial", "government", "restricted")),
-        "floor": DomainSpec("integer_level", int, tuple(range(-2, 31))),
-        "area_sqm": DomainSpec("bounded_measure", int, tuple(range(40, 401, 5))),
-        "parcel_zone": DomainSpec("zone_code", str, tuple(f"Z{i}" for i in range(1, 15))),
-        "risk_tier": DomainSpec("risk_tier", int, tuple(range(1, 10))),
-        "clearance_level": DomainSpec("clearance_level", int, tuple(range(0, 6))),
-        "facility_class": DomainSpec("facility_class", str, ("A", "B", "C", "D", "S")),
-        "access_count": DomainSpec("count", int, tuple(range(0, 200))),
-        "device_count": DomainSpec("count", int, tuple(range(1, 80))),
-        "data_sensitivity": DomainSpec("sensitivity", int, tuple(range(1, 8))),
-        "audit_class": DomainSpec("audit_class", str, ("open", "internal", "restricted", "classified")),
-        "device_firmware_class": DomainSpec("firmware_class", str, ("legacy", "standard", "hardened", "certified")),
-        "network_zone": DomainSpec("network_zone", str, ("flat", "segmented", "isolated", "airgapped")),
-        "operator_role": DomainSpec("operator_role", str, ("guest", "user", "admin", "root")),
+        "owner_id": DomainSpec(
+            "private_identifier",
+            str,
+            tuple(f"owner_{i:03d}" for i in range(100)),
+        ),
+        "city_code": DomainSpec(
+            "geo_code",
+            str,
+            ("MIL", "ROM", "TOR", "GEN", "NAP", "BOL", "FIR"),
+        ),
+        "asset_class": DomainSpec(
+            "asset_class",
+            str,
+            ("residential", "industrial", "government", "restricted"),
+        ),
+        "floor": DomainSpec(
+            "integer_level",
+            int,
+            tuple(range(-2, 31)),
+        ),
+        "area_sqm": DomainSpec(
+            "bounded_measure",
+            int,
+            tuple(range(40, 401, 5)),
+        ),
+        "parcel_zone": DomainSpec(
+            "zone_code",
+            str,
+            tuple(f"Z{i}" for i in range(1, 15)),
+        ),
+        "risk_tier": DomainSpec(
+            "risk_tier",
+            int,
+            tuple(range(1, 10)),
+        ),
+        "clearance_level": DomainSpec(
+            "clearance_level",
+            int,
+            tuple(range(0, 6)),
+        ),
+        "facility_class": DomainSpec(
+            "facility_class",
+            str,
+            ("A", "B", "C", "D", "S"),
+        ),
+        "access_count": DomainSpec(
+            "count",
+            int,
+            tuple(range(0, 200)),
+        ),
+        "device_count": DomainSpec(
+            "count",
+            int,
+            tuple(range(1, 80)),
+        ),
+        "data_sensitivity": DomainSpec(
+            "sensitivity",
+            int,
+            tuple(range(1, 8)),
+        ),
+        "audit_class": DomainSpec(
+            "audit_class",
+            str,
+            ("open", "internal", "restricted", "classified"),
+        ),
+        "device_firmware_class": DomainSpec(
+            "firmware_class",
+            str,
+            ("legacy", "standard", "hardened", "certified"),
+        ),
+        "network_zone": DomainSpec(
+            "network_zone",
+            str,
+            ("flat", "segmented", "isolated", "airgapped"),
+        ),
+        "operator_role": DomainSpec(
+            "operator_role",
+            str,
+            ("guest", "user", "admin", "root"),
+        ),
     }
 
-def invariant_universe() -> List[Tuple[str, Tuple[str, ...]]]:
-    """
-    Stylized universe of possible invariant templates representing C_pub.
-    """
-    return [
-        ("classification_sensitivity_clearance", ("asset_class", "clearance_level", "data_sensitivity")),
-        ("facility_risk_device_density", ("facility_class", "risk_tier", "device_count")),
-        ("geospatial_area_floor", ("parcel_zone", "area_sqm", "floor")),
-        ("asset_facility_risk_clearance", ("asset_class", "facility_class", "risk_tier", "clearance_level")),
-        ("sensitivity_access_devices", ("data_sensitivity", "access_count", "device_count")),
-        ("city_zone_asset", ("city_code", "parcel_zone", "asset_class")),
-        ("area_devices_facility_risk", ("area_sqm", "device_count", "facility_class", "risk_tier")),
-        ("audit_sensitivity_clearance", ("audit_class", "data_sensitivity", "clearance_level")),
-        ("firmware_network_facility", ("device_firmware_class", "network_zone", "facility_class")),
-        ("operator_access_risk", ("operator_role", "access_count", "risk_tier")),
-        ("asset_network_audit", ("asset_class", "network_zone", "audit_class")),
-        ("firmware_devices_sensitivity", ("device_firmware_class", "device_count", "data_sensitivity")),
-        ("operator_clearance_facility_zone", ("operator_role", "clearance_level", "facility_class", "network_zone")),
-        ("geo_audit_asset_sensitivity", ("city_code", "parcel_zone", "audit_class", "data_sensitivity")),
-        ("restricted_stack", ("asset_class", "facility_class", "network_zone", "audit_class", "device_firmware_class")),
+
+# ==============================================================================
+# HIDDEN SEMANTIC CONSTRAINT FAMILY
+# ==============================================================================
+
+def owner_numeric_id(owner_id: str) -> int:
+    prefix = "owner_"
+
+    if not owner_id.startswith(prefix):
+        return -1
+
+    suffix = owner_id[len(prefix):]
+
+    if not suffix.isdigit():
+        return -1
+
+    return int(suffix)
+
+
+def check_semantic_constraint(
+    constraint: HiddenConstraint,
+    candidate_values: Mapping[str, Any],
+) -> bool:
+    values = [
+        candidate_values[selector]
+        for selector in constraint.selectors
     ]
 
+    kind = constraint.kind
+    params = constraint.params
+
+    if kind == "owner_bucket":
+        owner_value = values[0]
+        numeric = owner_numeric_id(owner_value)
+
+        return (
+            numeric >= 0
+            and numeric % int(params["modulus"])
+            == int(params["residue"])
+        )
+
+    if kind == "city_zone_asset":
+        candidate_tuple = tuple(values)
+
+        return candidate_tuple in set(
+            tuple(item)
+            for item in params["allowed_tuples"]
+        )
+
+    if kind == "floor_area_relation":
+        floor_value, area_value = values
+
+        return (
+            area_value
+            == int(params["scale"]) * floor_value
+            + int(params["offset"])
+        )
+
+    if kind == "risk_clearance_sensitivity":
+        risk, clearance, sensitivity = values
+
+        return (
+            clearance
+            + int(params["clearance_margin"])
+            >= sensitivity
+            and risk >= sensitivity
+            and risk <= int(params["max_risk"])
+        )
+
+    if kind == "facility_device_density":
+        facility, device_count, area = values
+
+        return (
+            facility in set(params["allowed_facilities"])
+            and device_count
+            * int(params["area_per_device"])
+            <= area
+        )
+
+    if kind == "access_device_relation":
+        access_count, device_count = values
+
+        return (
+            access_count
+            >= int(params["minimum_multiplier"])
+            * device_count
+        )
+
+    if kind == "audit_policy":
+        audit_class, sensitivity, clearance = values
+
+        if audit_class in {"restricted", "classified"}:
+            return (
+                sensitivity >= int(params["minimum_sensitivity"])
+                and clearance >= int(params["minimum_clearance"])
+            )
+
+        return True
+
+    if kind == "firmware_network_facility":
+        firmware, network, facility = values
+
+        if firmware in {"hardened", "certified"}:
+            return (
+                network in set(params["secure_networks"])
+                and facility in set(params["secure_facilities"])
+            )
+
+        return True
+
+    if kind == "operator_access_risk":
+        operator, access_count, risk, clearance = values
+
+        if operator in {"admin", "root"}:
+            return (
+                access_count <= int(params["maximum_access"])
+                and risk <= int(params["maximum_risk"])
+                and clearance >= int(params["minimum_clearance"])
+            )
+
+        return True
+
+    if kind == "asset_network_audit":
+        asset_class, network, audit_class = values
+
+        if asset_class in {"government", "restricted"}:
+            return (
+                network in set(params["allowed_networks"])
+                and audit_class in set(params["allowed_audits"])
+            )
+
+        return True
+
+    raise ValueError(
+        f"Unknown hidden constraint kind: {kind}"
+    )
+
+
+def build_hidden_semantic_constraints(
+    key_to_selector: Mapping[str, str],
+    payload: Mapping[str, Any],
+    domains: Mapping[str, DomainSpec],
+    rnd: random.Random,
+) -> List[HiddenConstraint]:
+    """
+    Build a stylized but executable semantic policy family covering every field.
+
+    The owner constraint deliberately allows a hidden equivalence class rather
+    than committing to one exact owner value. This permits a real C_int-disclosure
+    alternative-state synthesis experiment.
+    """
+    true_owner_number = owner_numeric_id(
+        payload["owner_id"]
+    )
+
+    owner_modulus = rnd.choice(
+        [5, 7, 8, 10, 11]
+    )
+
+    city_tuple = (
+        payload["city_code"],
+        payload["parcel_zone"],
+        payload["asset_class"],
+    )
+
+    decoy_city_tuples = {
+        city_tuple,
+        ("ROM", "Z7", "government"),
+        ("MIL", "Z8", "government"),
+    }
+
+    constraints = [
+        HiddenConstraint(
+            cid="c_1",
+            kind="owner_bucket",
+            semantic_group_label="owner_hidden_equivalence_class",
+            selectors=(
+                key_to_selector["owner_id"],
+            ),
+            params={
+                "modulus": owner_modulus,
+                "residue": (
+                    true_owner_number
+                    % owner_modulus
+                ),
+            },
+        ),
+        HiddenConstraint(
+            cid="c_2",
+            kind="city_zone_asset",
+            semantic_group_label="city_zone_asset_policy",
+            selectors=(
+                key_to_selector["city_code"],
+                key_to_selector["parcel_zone"],
+                key_to_selector["asset_class"],
+            ),
+            params={
+                "allowed_tuples": tuple(
+                    sorted(decoy_city_tuples)
+                ),
+            },
+        ),
+        HiddenConstraint(
+            cid="c_3",
+            kind="floor_area_relation",
+            semantic_group_label="geospatial_area_floor",
+            selectors=(
+                key_to_selector["floor"],
+                key_to_selector["area_sqm"],
+            ),
+            params={
+                "scale": 40,
+                "offset": 0,
+            },
+        ),
+        HiddenConstraint(
+            cid="c_4",
+            kind="risk_clearance_sensitivity",
+            semantic_group_label="classification_sensitivity_clearance",
+            selectors=(
+                key_to_selector["risk_tier"],
+                key_to_selector["clearance_level"],
+                key_to_selector["data_sensitivity"],
+            ),
+            params={
+                "clearance_margin": 2,
+                "max_risk": 8,
+            },
+        ),
+        HiddenConstraint(
+            cid="c_5",
+            kind="facility_device_density",
+            semantic_group_label="facility_device_density",
+            selectors=(
+                key_to_selector["facility_class"],
+                key_to_selector["device_count"],
+                key_to_selector["area_sqm"],
+            ),
+            params={
+                "allowed_facilities": (
+                    "S",
+                    "C",
+                ),
+                "area_per_device": 5,
+            },
+        ),
+        HiddenConstraint(
+            cid="c_6",
+            kind="access_device_relation",
+            semantic_group_label="sensitivity_access_devices",
+            selectors=(
+                key_to_selector["access_count"],
+                key_to_selector["device_count"],
+            ),
+            params={
+                "minimum_multiplier": 2,
+            },
+        ),
+        HiddenConstraint(
+            cid="c_7",
+            kind="audit_policy",
+            semantic_group_label="audit_sensitivity_clearance",
+            selectors=(
+                key_to_selector["audit_class"],
+                key_to_selector["data_sensitivity"],
+                key_to_selector["clearance_level"],
+            ),
+            params={
+                "minimum_sensitivity": 5,
+                "minimum_clearance": 3,
+            },
+        ),
+        HiddenConstraint(
+            cid="c_8",
+            kind="firmware_network_facility",
+            semantic_group_label="firmware_network_facility",
+            selectors=(
+                key_to_selector["device_firmware_class"],
+                key_to_selector["network_zone"],
+                key_to_selector["facility_class"],
+            ),
+            params={
+                "secure_networks": (
+                    "segmented",
+                    "isolated",
+                    "airgapped",
+                ),
+                "secure_facilities": (
+                    "S",
+                    "C",
+                ),
+            },
+        ),
+        HiddenConstraint(
+            cid="c_9",
+            kind="operator_access_risk",
+            semantic_group_label="operator_access_risk",
+            selectors=(
+                key_to_selector["operator_role"],
+                key_to_selector["access_count"],
+                key_to_selector["risk_tier"],
+                key_to_selector["clearance_level"],
+            ),
+            params={
+                "maximum_access": 80,
+                "maximum_risk": 7,
+                "minimum_clearance": 4,
+            },
+        ),
+        HiddenConstraint(
+            cid="c_10",
+            kind="asset_network_audit",
+            semantic_group_label="asset_network_audit",
+            selectors=(
+                key_to_selector["asset_class"],
+                key_to_selector["network_zone"],
+                key_to_selector["audit_class"],
+            ),
+            params={
+                "allowed_networks": (
+                    "segmented",
+                    "isolated",
+                    "airgapped",
+                ),
+                "allowed_audits": (
+                    "restricted",
+                    "classified",
+                ),
+            },
+        ),
+    ]
+
+    return constraints
+
+
 # ==============================================================================
-# HIDDEN CONSTRAINT EVALUATION (Polynomial Engine)
+# AUXILIARY HIDDEN POLYNOMIAL CONSISTENCY FINGERPRINTS
 # ==============================================================================
 
-def constraint_score(c: HiddenConstraint, candidate_values: Dict[str, Any]) -> int:
-    """
-    Nonlinear hidden structural-semantic constraint evaluation.
-    Evaluates polynomial constraints over a finite field.
-    """
+def fingerprint_score(
+    fingerprint: HiddenPolynomialFingerprint,
+    candidate_values: Mapping[str, Any],
+) -> int:
     xs = [
-        stable_hidden_feature(candidate_values[selector], salt)
-        for selector, salt in zip(c.selectors, c.feature_salts)
+        stable_hidden_feature(
+            candidate_values[selector],
+            salt,
+        )
+        for selector, salt in zip(
+            fingerprint.selectors,
+            fingerprint.feature_salts,
+        )
     ]
 
-    acc = 0
+    accumulator = 0
 
-    for x, a, b, cmask in zip(xs, c.linear_coeffs, c.quadratic_coeffs, c.cubic_mask):
-        acc = (acc + a * x + b * x * x + cmask * x * x * x) % c.modulus
+    for x, linear, quadratic in zip(
+        xs,
+        fingerprint.linear_coeffs,
+        fingerprint.quadratic_coeffs,
+    ):
+        accumulator = (
+            accumulator
+            + linear * x
+            + quadratic * x * x
+        ) % fingerprint.modulus
 
-    k = 0
-    for i in range(len(xs)):
-        for j in range(i + 1, len(xs)):
-            acc = (acc + c.pair_coeffs[k] * xs[i] * xs[j]) % c.modulus
-            k += 1
+    pair_index = 0
 
-    return acc
+    for left_index in range(len(xs)):
+        for right_index in range(
+            left_index + 1,
+            len(xs),
+        ):
+            accumulator = (
+                accumulator
+                + fingerprint.pair_coeffs[pair_index]
+                * xs[left_index]
+                * xs[right_index]
+            ) % fingerprint.modulus
 
-def check_constraint(c: HiddenConstraint, evidence_values: Dict[str, Any]) -> bool:
-    return constraint_score(c, evidence_values) == c.target
+            pair_index += 1
+
+    return accumulator
+
+
+def build_polynomial_fingerprints(
+    semantic_constraints: Sequence[HiddenConstraint],
+    true_values: Mapping[str, Any],
+    rnd: random.Random,
+) -> List[HiddenPolynomialFingerprint]:
+    """
+    Build one auxiliary fingerprint for selected multi-fragment semantic groups.
+
+    Owner equivalence is intentionally excluded so that the disclosure solver can
+    construct a different owner inside the hidden semantic equivalence class.
+    """
+    fingerprints: List[HiddenPolynomialFingerprint] = []
+
+    eligible_constraints = [
+        constraint
+        for constraint in semantic_constraints
+        if len(constraint.selectors) >= 2
+    ]
+
+    selected = rnd.sample(
+        eligible_constraints,
+        k=min(5, len(eligible_constraints)),
+    )
+
+    for index, constraint in enumerate(
+        selected,
+        start=1,
+    ):
+        selectors = constraint.selectors
+        arity = len(selectors)
+
+        provisional = HiddenPolynomialFingerprint(
+            cid=f"p_{index}",
+            selectors=selectors,
+            feature_salts=tuple(
+                rng_token_hex(rnd, 16)
+                for _ in range(arity)
+            ),
+            linear_coeffs=tuple(
+                rnd.randint(1, PRIME - 1)
+                for _ in range(arity)
+            ),
+            quadratic_coeffs=tuple(
+                rnd.randint(1, PRIME - 1)
+                for _ in range(arity)
+            ),
+            pair_coeffs=tuple(
+                rnd.randint(1, PRIME - 1)
+                for _ in range(
+                    arity * (arity - 1) // 2
+                )
+            ),
+            target=0,
+        )
+
+        target = fingerprint_score(
+            provisional,
+            true_values,
+        )
+
+        fingerprints.append(
+            replace(
+                provisional,
+                target=target,
+            )
+        )
+
+    return fingerprints
+
 
 # ==============================================================================
 # REFRESHED CNVS INSTANCE GENERATION
@@ -265,615 +888,2087 @@ def build_refreshed_cnvs_instance(
     instance_id: str,
     n_verifiers: int,
     seed: int,
-    payload: Optional[Dict[str, Any]] = None,
+    payload: Optional[Mapping[str, Any]] = None,
 ) -> PrivateCNVSInstance:
-    """
-    Builds a fully refreshed CNVS instance (Moving Target Defense).
-    Regenerates topology, assignments, and hidden invariants at every execution.
-    """
     rnd = random.Random(seed)
-    payload = payload or default_payload()
+
+    payload = dict(
+        payload
+        if payload is not None
+        else default_payload()
+    )
+
     domains = domain_specs()
 
-    fragments: Dict[str, PrivateFragment] = {}
-    hidden_salts: Dict[str, str] = {}
-
-    for key, value in payload.items():
-        salt = rng_token_hex(rnd, 16)
-        selector = make_selector(key, salt)
-
-        fragments[selector] = PrivateFragment(
-            semantic_key=key, selector=selector, typ=type(value),
-            true_value=value, domain=domains[key]
+    if set(payload.keys()) != set(domains.keys()):
+        raise ValueError(
+            "Payload keys must exactly match the declared domain universe."
         )
-        hidden_salts[selector] = salt
 
-    verifiers = [f"V{i:03d}" for i in range(n_verifiers)]
-    if len(verifiers) < len(fragments):
-        raise ValueError("n_verifiers must be >= number of terminal fragments.")
+    if n_verifiers < len(payload):
+        raise ValueError(
+            "n_verifiers must be at least the number of terminal fragments."
+        )
 
-    assigned_verifiers = rnd.sample(verifiers, len(fragments))
-    assignment = {selector: verifier_id for selector, verifier_id in zip(fragments.keys(), assigned_verifiers)}
+    fragments: Dict[str, PrivateFragment] = {}
+    local_tasks: Dict[str, LocalTaskView] = {}
 
-    identity_hashes = {
-        selector: make_identity_proof(hidden_salts[selector], selector, instance_id, assignment[selector])
-        for selector in fragments
+    for semantic_key, value in payload.items():
+        while True:
+            selector_salt = rng_token_hex(
+                rnd,
+                32,
+            )
+
+            selector = make_selector(
+                semantic_key,
+                selector_salt,
+            )
+
+            if selector not in fragments:
+                break
+
+        domain = domains[semantic_key]
+
+        fragment = PrivateFragment(
+            semantic_key=semantic_key,
+            selector=selector,
+            typ=type(value),
+            true_value=value,
+            domain=domain,
+        )
+
+        fragments[selector] = fragment
+
+    verifiers = [
+        f"V{index:03d}"
+        for index in range(n_verifiers)
+    ]
+
+    assigned_verifiers = rnd.sample(
+        verifiers,
+        len(fragments),
+    )
+
+    assignment = {
+        selector: verifier_id
+        for selector, verifier_id in zip(
+            fragments.keys(),
+            assigned_verifiers,
+        )
     }
+
+    verifier_secrets = {
+        verifier_id: bytes.fromhex(
+            rng_token_hex(
+                rnd,
+                32,
+            )
+        )
+        for verifier_id in verifiers
+    }
+
+    for selector, fragment in fragments.items():
+        verifier_id = assignment[selector]
+
+        local_tasks[selector] = LocalTaskView(
+            selector=selector,
+            expected_type=fragment.typ,
+            domain_name=fragment.domain.name,
+            allowed_values=fragment.domain.values,
+            instance_id=instance_id,
+            verifier_id=verifier_id,
+        )
 
     C_pub = PublicInvariantCategory(
         name="hidden_structural_semantic_invariant_family",
-        description="Public category only. C_int (theta_C, R_int, binding) remains hidden."
+        description=(
+            "Public category only. Instantiated semantic policies, topology, "
+            "binding, and auxiliary fingerprints remain hidden."
+        ),
     )
 
-    key_to_selector = {fragment.semantic_key: selector for selector, fragment in fragments.items()}
-    universe = invariant_universe()
-    k_constraints = rnd.randint(7, min(11, len(universe)))
-    selected_templates = rnd.sample(universe, k_constraints)
+    key_to_selector = {
+        fragment.semantic_key: selector
+        for selector, fragment in fragments.items()
+    }
 
-    true_values = {selector: fragment.true_value for selector, fragment in fragments.items()}
+    semantic_constraints = build_hidden_semantic_constraints(
+        key_to_selector=key_to_selector,
+        payload=payload,
+        domains=domains,
+        rnd=rnd,
+    )
 
-    C_int: List[HiddenConstraint] = []
+    true_values = {
+        selector: fragment.true_value
+        for selector, fragment in fragments.items()
+    }
+
+    polynomial_fingerprints = build_polynomial_fingerprints(
+        semantic_constraints=semantic_constraints,
+        true_values=true_values,
+        rnd=rnd,
+    )
+
     hidden_topology_edges: Set[Tuple[str, str]] = set()
 
-    for idx, (label, semantic_keys) in enumerate(selected_templates):
-        selectors = tuple(key_to_selector[key] for key in semantic_keys)
-        arity = len(selectors)
+    for constraint in semantic_constraints:
+        selectors = constraint.selectors
 
-        feature_salts = tuple(rng_token_hex(rnd, 16) for _ in range(arity))
-        linear_coeffs = tuple(rnd.randint(1, PRIME - 1) for _ in range(arity))
-        quadratic_coeffs = tuple(rnd.randint(1, PRIME - 1) for _ in range(arity))
-        cubic_mask = tuple(rnd.randint(0, PRIME - 1) for _ in range(arity))
-        pair_coeffs = tuple(rnd.randint(1, PRIME - 1) for _ in range(arity * (arity - 1) // 2))
+        for left_index in range(len(selectors)):
+            for right_index in range(
+                left_index + 1,
+                len(selectors),
+            ):
+                hidden_topology_edges.add(
+                    tuple(
+                        sorted(
+                            (
+                                selectors[left_index],
+                                selectors[right_index],
+                            )
+                        )
+                    )
+                )
 
-        provisional = HiddenConstraint(
-            cid=f"c_{idx + 1}", semantic_group_label=label, selectors=selectors,
-            feature_salts=feature_salts, linear_coeffs=linear_coeffs,
-            quadratic_coeffs=quadratic_coeffs, pair_coeffs=pair_coeffs,
-            cubic_mask=cubic_mask, target=0
+    critical_selectors = {
+        selector
+        for constraint in semantic_constraints
+        for selector in constraint.selectors
+    }
+
+    uncovered = (
+        set(fragments.keys())
+        - critical_selectors
+    )
+
+    if uncovered:
+        uncovered_keys = [
+            fragments[selector].semantic_key
+            for selector in uncovered
+        ]
+
+        raise RuntimeError(
+            "Full structural-semantic coverage failed. "
+            f"Uncovered fields: {uncovered_keys}"
         )
 
-        target = constraint_score(provisional, true_values)
-
-        C_int.append(HiddenConstraint(
-            cid=provisional.cid, semantic_group_label=label, selectors=selectors,
-            feature_salts=feature_salts, linear_coeffs=linear_coeffs,
-            quadratic_coeffs=quadratic_coeffs, pair_coeffs=pair_coeffs,
-            cubic_mask=cubic_mask, target=target
-        ))
-
-        for i in range(arity):
-            for j in range(i + 1, arity):
-                hidden_topology_edges.add(tuple(sorted((selectors[i], selectors[j]))))
-
-    critical_selectors = {selector for c in C_int for selector in c.selectors}
-
-    return PrivateCNVSInstance(
-        fragments=fragments, hidden_salts=hidden_salts, assignment=assignment,
-        identity_hashes=identity_hashes, instance_id=instance_id,
-        C_pub=C_pub, C_int=C_int, hidden_topology_edges=hidden_topology_edges,
-        critical_selectors=critical_selectors
+    state = PrivateCNVSInstance(
+        fragments=fragments,
+        local_tasks=local_tasks,
+        assignment=assignment,
+        verifier_secrets=verifier_secrets,
+        instance_id=instance_id,
+        C_pub=C_pub,
+        semantic_constraints=semantic_constraints,
+        polynomial_fingerprints=polynomial_fingerprints,
+        hidden_topology_edges=hidden_topology_edges,
+        critical_selectors=critical_selectors,
     )
+
+    if not VG_accepts(
+        state,
+        honest_evidence(state),
+    ):
+        raise RuntimeError(
+            "Fresh honest state failed its own validation pipeline."
+        )
+
+    return state
+
 
 # ==============================================================================
 # LOCAL EVIDENCE AND GLOBAL VALIDATION
 # ==============================================================================
 
+def V_L(
+    task: LocalTaskView,
+    observed_value: Any,
+) -> bool:
+    """
+    Exact local type and public-domain admissibility.
+    """
+    return (
+        type(observed_value)
+        is task.expected_type
+        and observed_value
+        in task.allowed_values
+    )
+
+
 def emit_evidence(
-    state: PrivateCNVSInstance, selector: str, observed_value: Any,
-    identity_proof: Optional[str] = None, instance_id: Optional[str] = None,
+    task: LocalTaskView,
+    verifier_secret: bytes,
+    observed_value: Any,
+    *,
+    instance_id_override: Optional[str] = None,
+    claimed_local_admissible: Optional[bool] = None,
+    use_valid_signature: bool = True,
 ) -> LocalEvidence:
-    instance = instance_id or state.instance_id
-    fragment = state.fragments[selector]
-    local_ok = isinstance(observed_value, fragment.typ)
-    proof = identity_proof if identity_proof is not None else state.identity_hashes[selector]
+    instance_id = (
+        task.instance_id
+        if instance_id_override is None
+        else instance_id_override
+    )
+
+    recomputed_local = V_L(
+        task,
+        observed_value,
+    )
+
+    local_claim = (
+        recomputed_local
+        if claimed_local_admissible is None
+        else bool(claimed_local_admissible)
+    )
+
+    signature = make_message_signature(
+        verifier_secret=verifier_secret,
+        verifier_id=task.verifier_id,
+        selector=task.selector,
+        instance_id=instance_id,
+        observed_value=observed_value,
+        local_admissible=local_claim,
+    )
+
+    if not use_valid_signature:
+        signature = "invalid_signature"
 
     return LocalEvidence(
-        selector=selector, observed_value=observed_value,
-        local_admissible=local_ok, identity_proof=proof,
-        instance_id=instance, verifier_id=state.assignment[selector]
+        selector=task.selector,
+        observed_value=observed_value,
+        local_admissible=local_claim,
+        signature=signature,
+        instance_id=instance_id,
+        verifier_id=task.verifier_id,
     )
 
-def honest_evidence(state: PrivateCNVSInstance) -> Dict[str, LocalEvidence]:
-    return {selector: emit_evidence(state, selector, fragment.true_value) for selector, fragment in state.fragments.items()}
 
-def VG_accepts(state: PrivateCNVSInstance, evidence: Dict[str, LocalEvidence]) -> bool:
-    """Decoupled global veto V_G."""
-    if set(evidence.keys()) != set(state.fragments.keys()): return False
-    for selector, ev in evidence.items():
-        if ev.selector != selector or not ev.local_admissible: return False
-        if ev.instance_id != state.instance_id: return False
-        if ev.identity_proof != state.identity_hashes[selector]: return False
-
-    values = {selector: ev.observed_value for selector, ev in evidence.items()}
-    return all(check_constraint(c_i, values) for c_i in state.C_int)
-
-# ==============================================================================
-# ADVERSARY VIEW AND DEPENDENT MASS COLLUSION
-# ==============================================================================
-
-def make_adversary_view(state: PrivateCNVSInstance, cfg: SimulationConfig, rnd: random.Random) -> AdversaryView:
-    all_verifiers = [f"V{i:03d}" for i in range(cfg.n_verifiers)]
-    coalition_size = max(0, min(len(all_verifiers), round(cfg.coalition_fraction * cfg.n_verifiers)))
-    compromised_verifiers = set(rnd.sample(all_verifiers, coalition_size))
-
-    local_tasks, compromised_values, compromised_proofs = {}, {}, {}
+def honest_evidence(
+    state: PrivateCNVSInstance,
+) -> Dict[str, LocalEvidence]:
+    evidence: Dict[str, LocalEvidence] = {}
 
     for selector, fragment in state.fragments.items():
-        verifier_id = state.assignment[selector]
-        local_tasks[selector] = LocalTaskView(
-            selector=selector, type_name=fragment.typ.__name__,
-            public_domain_name=fragment.domain.name, instance_id=state.instance_id,
-            verifier_id=verifier_id
+        task = state.local_tasks[selector]
+        secret = state.verifier_secrets[
+            task.verifier_id
+        ]
+
+        evidence[selector] = emit_evidence(
+            task=task,
+            verifier_secret=secret,
+            observed_value=fragment.true_value,
         )
-        if verifier_id in compromised_verifiers:
-            compromised_values[selector] = fragment.true_value
-            compromised_proofs[selector] = state.identity_hashes[selector]
 
-    leaked_edges = {edge for edge in state.hidden_topology_edges if rnd.random() < cfg.gamma_top_leak}
-    selectors = list(state.fragments.keys())
-    rnd.shuffle(selectors)
+    return evidence
 
-    changed = True
-    propagation_passes = 0
-    while changed and propagation_passes < 3:
-        changed = False
-        propagation_passes += 1
-        for selector in selectors:
-            if selector in compromised_values or selector not in state.critical_selectors: continue
 
-            neighbors = {b for a, b in leaked_edges if a == selector} | {a for a, b in leaked_edges if b == selector}
-
-            if not neighbors:
-                p_infer = cfg.dependent_infer_base
-            else:
-                known_fraction = sum(1 for n in neighbors if n in compromised_values) / len(neighbors)
-                p_infer = min(cfg.p_infer_cap, cfg.dependent_infer_base + cfg.dependent_infer_rho * known_fraction)
-
-            if rnd.random() < p_infer:
-                compromised_values[selector] = state.fragments[selector].true_value
-                if rnd.random() < cfg.p_identity_after_infer:
-                    compromised_proofs[selector] = state.identity_hashes[selector]
-                changed = True
-
-    C_int_leaked = rnd.random() < cfg.C_int_leak_probability
-
-    return AdversaryView(
-        selectors=tuple(state.fragments.keys()), local_tasks=local_tasks,
-        C_pub=state.C_pub, leaked_metadata_edges=leaked_edges,
-        compromised_values=compromised_values, compromised_proofs=compromised_proofs,
-        compromised_verifiers=compromised_verifiers, C_int_leaked=C_int_leaked
+def semantic_family_accepts(
+    state: PrivateCNVSInstance,
+    values: Mapping[str, Any],
+) -> bool:
+    return all(
+        check_semantic_constraint(
+            constraint,
+            values,
+        )
+        for constraint in state.semantic_constraints
     )
 
-def random_alternative_value(fragment: PrivateFragment, rnd: random.Random) -> Any:
-    values = list(fragment.domain.values)
-    if fragment.true_value in values and len(values) > 1: values.remove(fragment.true_value)
-    return rnd.choice(values)
 
-def blind_forgery_attempt(state: PrivateCNVSInstance, adv: AdversaryView, cfg: SimulationConfig, rnd: random.Random) -> Tuple[bool, int, int]:
-    controlled_critical = state.critical_selectors & set(adv.compromised_values.keys()) & set(adv.compromised_proofs.keys())
-    h_crit = len(state.critical_selectors)
-    if len(controlled_critical) < h_crit: return False, len(controlled_critical), h_crit
+def fingerprints_accept(
+    state: PrivateCNVSInstance,
+    values: Mapping[str, Any],
+) -> bool:
+    return all(
+        fingerprint_score(
+            fingerprint,
+            values,
+        )
+        == fingerprint.target
+        for fingerprint in state.polynomial_fingerprints
+    )
 
-    for _ in range(cfg.blind_attempts):
-        forged_values = {selector: fragment.true_value for selector, fragment in state.fragments.items()}
-        mutated_selector = rnd.choice(list(controlled_critical))
-        forged_values[mutated_selector] = random_alternative_value(state.fragments[mutated_selector], rnd)
 
-        for selector in controlled_critical:
-            if selector != mutated_selector and rnd.random() < 0.25:
-                forged_values[selector] = random_alternative_value(state.fragments[selector], rnd)
+def VG_accepts(
+    state: PrivateCNVSInstance,
+    evidence: Mapping[str, LocalEvidence],
+) -> bool:
+    """
+    Execute the application-layer validation pipeline.
+    """
+    if set(evidence.keys()) != set(
+        state.fragments.keys()
+    ):
+        return False
 
-        forged_evidence = {}
-        for selector, fragment in state.fragments.items():
-            proof = state.identity_hashes[selector] if selector in controlled_critical or selector not in state.critical_selectors else "missing_identity_proof"
-            forged_evidence[selector] = emit_evidence(state, selector, forged_values[selector], identity_proof=proof)
+    for selector, item in evidence.items():
+        if item.selector != selector:
+            return False
 
-        if VG_accepts(state, forged_evidence):
-            if any(forged_values[s] != state.fragments[s].true_value for s in state.fragments):
-                return True, len(controlled_critical), h_crit
+        task = state.local_tasks.get(
+            selector
+        )
 
-    return False, len(controlled_critical), h_crit
+        if task is None:
+            return False
 
-def Cint_leak_worst_case_attack(state: PrivateCNVSInstance, adv: AdversaryView) -> bool:
-    """Upper-bound validation boundary: Assumes full C_int exfiltration."""
-    if not adv.C_int_leaked: return False
-    controlled_critical = state.critical_selectors & set(adv.compromised_values.keys()) & set(adv.compromised_proofs.keys())
-    return len(controlled_critical) == len(state.critical_selectors)
+        if item.verifier_id != task.verifier_id:
+            return False
+
+        if item.instance_id != state.instance_id:
+            return False
+
+        verifier_secret = state.verifier_secrets.get(
+            item.verifier_id
+        )
+
+        if verifier_secret is None:
+            return False
+
+        expected_signature = make_message_signature(
+            verifier_secret=verifier_secret,
+            verifier_id=item.verifier_id,
+            selector=item.selector,
+            instance_id=item.instance_id,
+            observed_value=item.observed_value,
+            local_admissible=item.local_admissible,
+        )
+
+        if not hmac.compare_digest(
+            item.signature,
+            expected_signature,
+        ):
+            return False
+
+        recomputed_local = V_L(
+            task,
+            item.observed_value,
+        )
+
+        if not recomputed_local:
+            return False
+
+        if item.local_admissible is not recomputed_local:
+            return False
+
+    values = {
+        selector: item.observed_value
+        for selector, item in evidence.items()
+    }
+
+    return (
+        semantic_family_accepts(
+            state,
+            values,
+        )
+        and fingerprints_accept(
+            state,
+            values,
+        )
+    )
+
+
+# ==============================================================================
+# ADVERSARY VIEW AND ONE-SHOT DEPENDENT INFERENCE
+# ==============================================================================
+
+def make_adversary_view(
+    state: PrivateCNVSInstance,
+    cfg: SimulationConfig,
+    coalition_size: int,
+    rnd: random.Random,
+) -> AdversaryView:
+    all_verifiers = [
+        f"V{index:03d}"
+        for index in range(
+            cfg.n_verifiers
+        )
+    ]
+
+    if not 0 <= coalition_size <= len(
+        all_verifiers
+    ):
+        raise ValueError(
+            "coalition_size is outside the verifier population."
+        )
+
+    compromised_verifiers = set(
+        rnd.sample(
+            all_verifiers,
+            coalition_size,
+        )
+    )
+
+    compromised_local_tasks: Dict[
+        str,
+        LocalTaskView,
+    ] = {}
+
+    compromised_values: Dict[
+        str,
+        Any,
+    ] = {}
+
+    compromised_secrets: Dict[
+        str,
+        bytes,
+    ] = {}
+
+    for selector, fragment in state.fragments.items():
+        verifier_id = state.assignment[
+            selector
+        ]
+
+        if verifier_id in compromised_verifiers:
+            compromised_local_tasks[
+                selector
+            ] = state.local_tasks[
+                selector
+            ]
+
+            compromised_values[
+                selector
+            ] = fragment.true_value
+
+            compromised_secrets[
+                selector
+            ] = state.verifier_secrets[
+                verifier_id
+            ]
+
+    leaked_edges = {
+        edge
+        for edge in state.hidden_topology_edges
+        if rnd.random()
+        < cfg.edge_disclosure_probability
+    }
+
+    unknown_critical = [
+        selector
+        for selector in state.critical_selectors
+        if selector not in compromised_values
+    ]
+
+    rnd.shuffle(
+        unknown_critical
+    )
+
+    # Every unknown selector receives at most one inference trial.
+    # Therefore p_infer_cap is a true per-selector conditional cap in this model.
+    for selector in unknown_critical:
+        neighbors = {
+            right
+            for left, right in leaked_edges
+            if left == selector
+        } | {
+            left
+            for left, right in leaked_edges
+            if right == selector
+        }
+
+        if neighbors:
+            known_fraction = (
+                sum(
+                    neighbor
+                    in compromised_values
+                    for neighbor in neighbors
+                )
+                / len(neighbors)
+            )
+        else:
+            known_fraction = 0.0
+
+        p_infer = min(
+            cfg.p_infer_cap,
+            cfg.dependent_infer_base
+            + cfg.dependent_infer_rho
+            * known_fraction,
+        )
+
+        if rnd.random() < p_infer:
+            compromised_values[
+                selector
+            ] = state.fragments[
+                selector
+            ].true_value
+
+            if (
+                rnd.random()
+                < cfg.p_identity_after_infer
+            ):
+                compromised_secrets[
+                    selector
+                ] = state.verifier_secrets[
+                    state.assignment[
+                        selector
+                    ]
+                ]
+
+                compromised_local_tasks[
+                    selector
+                ] = state.local_tasks[
+                    selector
+                ]
+
+    return AdversaryView(
+        selectors=tuple(
+            state.fragments.keys()
+        ),
+        compromised_local_tasks=compromised_local_tasks,
+        C_pub=state.C_pub,
+        leaked_metadata_edges=leaked_edges,
+        compromised_values=compromised_values,
+        compromised_secrets=compromised_secrets,
+        compromised_verifiers=compromised_verifiers,
+        C_int_leaked=False,
+    )
+
+
+def controlled_critical_selectors(
+    state: PrivateCNVSInstance,
+    adversary: AdversaryView,
+) -> Set[str]:
+    return (
+        state.critical_selectors
+        & set(
+            adversary.compromised_values.keys()
+        )
+        & set(
+            adversary.compromised_secrets.keys()
+        )
+    )
+
+
+def random_alternative_value(
+    fragment: PrivateFragment,
+    rnd: random.Random,
+) -> Any:
+    alternatives = [
+        value
+        for value in fragment.domain.values
+        if value != fragment.true_value
+    ]
+
+    if not alternatives:
+        raise RuntimeError(
+            f"No alternative value exists for {fragment.semantic_key}."
+        )
+
+    return rnd.choice(
+        alternatives
+    )
+
+
+def build_signed_candidate_evidence(
+    state: PrivateCNVSInstance,
+    adversary: AdversaryView,
+    candidate_values: Mapping[str, Any],
+) -> Optional[Dict[str, LocalEvidence]]:
+    evidence: Dict[str, LocalEvidence] = {}
+
+    for selector in state.fragments:
+        secret = adversary.compromised_secrets.get(
+            selector
+        )
+
+        if secret is None:
+            return None
+
+        task = state.local_tasks[
+            selector
+        ]
+
+        evidence[selector] = emit_evidence(
+            task=task,
+            verifier_secret=secret,
+            observed_value=candidate_values[
+                selector
+            ],
+        )
+
+    return evidence
+
+
+def blind_forgery_attempt(
+    state: PrivateCNVSInstance,
+    adversary: AdversaryView,
+    cfg: SimulationConfig,
+    rnd: random.Random,
+) -> Tuple[bool, int, int]:
+    controlled = controlled_critical_selectors(
+        state,
+        adversary,
+    )
+
+    h_crit = len(
+        state.critical_selectors
+    )
+
+    if len(controlled) < h_crit:
+        return (
+            False,
+            len(controlled),
+            h_crit,
+        )
+
+    selector_list = list(
+        controlled
+    )
+
+    for _ in range(
+        cfg.blind_attempts
+    ):
+        forged_values = {
+            selector: fragment.true_value
+            for selector, fragment in state.fragments.items()
+        }
+
+        mutation_count = rnd.randint(
+            1,
+            min(
+                3,
+                len(selector_list),
+            ),
+        )
+
+        mutated_selectors = rnd.sample(
+            selector_list,
+            mutation_count,
+        )
+
+        for selector in mutated_selectors:
+            forged_values[
+                selector
+            ] = random_alternative_value(
+                state.fragments[
+                    selector
+                ],
+                rnd,
+            )
+
+        forged_evidence = build_signed_candidate_evidence(
+            state,
+            adversary,
+            forged_values,
+        )
+
+        if forged_evidence is None:
+            continue
+
+        if (
+            VG_accepts(
+                state,
+                forged_evidence,
+            )
+            and any(
+                forged_values[selector]
+                != state.fragments[
+                    selector
+                ].true_value
+                for selector in state.fragments
+            )
+        ):
+            return (
+                True,
+                len(controlled),
+                h_crit,
+            )
+
+    return (
+        False,
+        len(controlled),
+        h_crit,
+    )
+
+
+# ==============================================================================
+# EXECUTED C_int-DISCLOSURE ATTACK
+# ==============================================================================
+
+def find_alternative_state_with_leaked_Cint(
+    state: PrivateCNVSInstance,
+    cfg: SimulationConfig,
+    rnd: random.Random,
+) -> Optional[Dict[str, Any]]:
+    """
+    Search for an alternative state using the disclosed instantiated constraints.
+
+    The solver first exploits the hidden owner equivalence class. If that does
+    not yield a valid alternative, it performs a bounded guided random search.
+    """
+    true_values = {
+        selector: fragment.true_value
+        for selector, fragment in state.fragments.items()
+    }
+
+    owner_constraint = next(
+        constraint
+        for constraint in state.semantic_constraints
+        if constraint.kind == "owner_bucket"
+    )
+
+    owner_selector = owner_constraint.selectors[
+        0
+    ]
+
+    owner_fragment = state.fragments[
+        owner_selector
+    ]
+
+    for alternative_owner in owner_fragment.domain.values:
+        if alternative_owner == owner_fragment.true_value:
+            continue
+
+        candidate = dict(
+            true_values
+        )
+
+        candidate[
+            owner_selector
+        ] = alternative_owner
+
+        if (
+            semantic_family_accepts(
+                state,
+                candidate,
+            )
+            and fingerprints_accept(
+                state,
+                candidate,
+            )
+        ):
+            return candidate
+
+    selectors = list(
+        state.critical_selectors
+    )
+
+    for _ in range(
+        cfg.leak_solver_attempts
+    ):
+        candidate = dict(
+            true_values
+        )
+
+        mutation_count = rnd.randint(
+            1,
+            min(
+                4,
+                len(selectors),
+            ),
+        )
+
+        for selector in rnd.sample(
+            selectors,
+            mutation_count,
+        ):
+            candidate[
+                selector
+            ] = random_alternative_value(
+                state.fragments[
+                    selector
+                ],
+                rnd,
+            )
+
+        if (
+            semantic_family_accepts(
+                state,
+                candidate,
+            )
+            and fingerprints_accept(
+                state,
+                candidate,
+            )
+        ):
+            return candidate
+
+    return None
+
+
+def Cint_disclosure_attack(
+    state: PrivateCNVSInstance,
+    adversary: AdversaryView,
+    cfg: SimulationConfig,
+    rnd: random.Random,
+) -> Tuple[bool, bool]:
+    """
+    Execute, rather than assume, the C_int disclosure boundary.
+
+    Returns:
+      attack_accepted:
+          an actually forged alternative state passed V_G;
+
+      solver_found_alternative:
+          the disclosed constraints admitted and exposed an alternative candidate
+          within the bounded solver budget.
+    """
+    if not adversary.C_int_leaked:
+        return False, False
+
+    controlled = controlled_critical_selectors(
+        state,
+        adversary,
+    )
+
+    if len(controlled) < len(
+        state.critical_selectors
+    ):
+        return False, False
+
+    alternative = find_alternative_state_with_leaked_Cint(
+        state,
+        cfg,
+        rnd,
+    )
+
+    if alternative is None:
+        return False, False
+
+    evidence = build_signed_candidate_evidence(
+        state,
+        adversary,
+        alternative,
+    )
+
+    if evidence is None:
+        return False, True
+
+    differs_from_truth = any(
+        alternative[selector]
+        != state.fragments[
+            selector
+        ].true_value
+        for selector in state.fragments
+    )
+
+    accepted = (
+        differs_from_truth
+        and VG_accepts(
+            state,
+            evidence,
+        )
+    )
+
+    return accepted, True
+
 
 # ==============================================================================
 # REFRESH SCENARIO
 # ==============================================================================
 
-def fingerprint_Cint(state: PrivateCNVSInstance) -> str:
-    serializable = [{
-        "cid": c.cid, "selectors": c.selectors, "linear_coeffs": c.linear_coeffs,
-        "target": c.target, "modulus": c.modulus
-    } for c in state.C_int]
-    return sha256_text(json.dumps(serializable, sort_keys=True))[:16]
-
-def scenario_full_refresh_attack(cfg: SimulationConfig) -> None:
-    payload = default_payload()
-    state_t = build_refreshed_cnvs_instance("instance_t", cfg.n_verifiers, cfg.seed, payload)
-    state_t1 = build_refreshed_cnvs_instance("instance_t_plus_1", cfg.n_verifiers, cfg.seed + 1, payload)
-
-    print("\n================ TOPOLOGICAL REFRESH (MTD) ================\n")
-    print("Same declaration/payload, different CNVS internal structure.")
-    print(f"C_int fingerprint at t:     {fingerprint_Cint(state_t)}")
-    print(f"C_int fingerprint at t + 1: {fingerprint_Cint(state_t1)}")
-    
-    stale_evidence = honest_evidence(state_t)
-    replay_result = VG_accepts(state_t1, stale_evidence)
-    print(f"\nReplay of old evidence against refreshed instance accepted by V_G: {replay_result}")
-
-# ==============================================================================
-# PROGRESSIVE MASS COLLUSION EXPERIMENT
-# ==============================================================================
-
-def run_single_collusion_level(cfg: SimulationConfig, coalition_fraction: float, trials: int, seed_offset: int = 0) -> Dict[str, Any]:
-    rnd = random.Random(cfg.seed + seed_offset)
-    blind_false_accepts, Cint_leak_breaks, all_critical_controlled = 0, 0, 0
-    controlled_counts, h_values, metadata_edges_seen = [], [], []
-
-    for trial in range(trials):
-        state = build_refreshed_cnvs_instance(f"instance_{seed_offset}_{trial}", cfg.n_verifiers, cfg.seed + seed_offset + trial, default_payload())
-        if not VG_accepts(state, honest_evidence(state)): raise RuntimeError("Honest CNVS state must validate.")
-
-        local_cfg = SimulationConfig(
-            trials=cfg.trials, n_verifiers=cfg.n_verifiers, coalition_fraction=coalition_fraction,
-            gamma_top_leak=cfg.gamma_top_leak, dependent_infer_base=cfg.dependent_infer_base,
-            dependent_infer_rho=cfg.dependent_infer_rho, p_infer_cap=cfg.p_infer_cap,
-            p_identity_after_infer=cfg.p_identity_after_infer, blind_attempts=cfg.blind_attempts,
-            C_int_leak_probability=cfg.C_int_leak_probability, seed=cfg.seed + seed_offset + trial,
-        )
-
-        adv = make_adversary_view(state, local_cfg, rnd)
-        blind_ok, controlled, h_crit = blind_forgery_attempt(state, adv, local_cfg, rnd)
-        leak_ok = Cint_leak_worst_case_attack(state, adv)
-
-        controlled_counts.append(controlled)
-        h_values.append(h_crit)
-        metadata_edges_seen.append(len(adv.leaked_metadata_edges))
-
-        if controlled == h_crit: all_critical_controlled += 1
-        if blind_ok: blind_false_accepts += 1
-        if leak_ok: Cint_leak_breaks += 1
-
-    return {
-        "coalition_fraction": coalition_fraction,
-        "avg_h_crit": statistics.mean(h_values),
-        "avg_controlled_critical": statistics.mean(controlled_counts),
-        "max_controlled_critical": max(controlled_counts),
-        "all_critical_controlled_rate": all_critical_controlled / trials,
-        "blind_false_accept_rate": blind_false_accepts / trials,
-        "Cint_leak_break_rate": Cint_leak_breaks / trials,
+def fingerprint_Cint(
+    state: PrivateCNVSInstance,
+) -> str:
+    serializable = {
+        "semantic_constraints": [
+            {
+                "cid": constraint.cid,
+                "kind": constraint.kind,
+                "label": constraint.semantic_group_label,
+                "selectors": constraint.selectors,
+                "params": constraint.params,
+            }
+            for constraint in state.semantic_constraints
+        ],
+        "polynomial_fingerprints": [
+            {
+                "cid": fingerprint.cid,
+                "selectors": fingerprint.selectors,
+                "feature_salts": fingerprint.feature_salts,
+                "linear_coeffs": fingerprint.linear_coeffs,
+                "quadratic_coeffs": fingerprint.quadratic_coeffs,
+                "pair_coeffs": fingerprint.pair_coeffs,
+                "target": fingerprint.target,
+                "modulus": fingerprint.modulus,
+            }
+            for fingerprint in state.polynomial_fingerprints
+        ],
+        "topology": sorted(
+            state.hidden_topology_edges
+        ),
+        "assignment": sorted(
+            state.assignment.items()
+        ),
     }
 
-def run_progressive_mass_collusion(cfg: SimulationConfig) -> List[Dict[str, Any]]:
-    fractions = [0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95, 0.98, 0.99, 1.00]
-    return [run_single_collusion_level(cfg, frac, cfg.trials, 10_000 * i) for i, frac in enumerate(fractions)]
+    return sha256_text(
+        json.dumps(
+            serializable,
+            sort_keys=True,
+            ensure_ascii=False,
+        )
+    )[:24]
 
-def print_progressive_mass_collusion_results(results: List[Dict[str, Any]], title: str) -> None:
-    print(f"\n================ {title} ================\n")
-    header = "collusion | avg_h | avg_ctrl | max_ctrl | P(all critical) | P(false accept) | P(C_int leak break)"
-    print(header)
-    print("-" * len(header))
-    for r in results:
-        print(f"{r['coalition_fraction'] * 100:7.0f}% | {r['avg_h_crit']:5.2f} | {r['avg_controlled_critical']:8.2f} | {r['max_controlled_critical']:8d} | {r['all_critical_controlled_rate']:15.8f} | {r['blind_false_accept_rate']:15.8f} | {r['Cint_leak_break_rate']:19.8f}")
+
+def scenario_full_refresh_attack(
+    cfg: SimulationConfig,
+) -> None:
+    payload = default_payload()
+
+    state_t = build_refreshed_cnvs_instance(
+        "instance_t",
+        cfg.n_verifiers,
+        cfg.seed,
+        payload,
+    )
+
+    state_t1 = build_refreshed_cnvs_instance(
+        "instance_t_plus_1",
+        cfg.n_verifiers,
+        cfg.seed + 1,
+        payload,
+    )
+
+    print(
+        "\n================ FULL STRUCTURAL REFRESH ================\n"
+    )
+
+    print(
+        "Same declaration, independently refreshed internal instance."
+    )
+
+    print(
+        "C_int fingerprint at t:    ",
+        fingerprint_Cint(
+            state_t
+        ),
+    )
+
+    print(
+        "C_int fingerprint at t + 1:",
+        fingerprint_Cint(
+            state_t1
+        ),
+    )
+
+    stale_evidence = honest_evidence(
+        state_t
+    )
+
+    replay_result = VG_accepts(
+        state_t1,
+        stale_evidence,
+    )
+
+    if replay_result:
+        raise AssertionError(
+            "Stale evidence was accepted after full structural refresh."
+        )
+
+    print(
+        "\nReplay of old evidence against refreshed instance accepted:",
+        replay_result,
+    )
 
 
 # ==============================================================================
-# THEOREM-STYLE REFERENCES AND COMPARISON PLOTS
+# ANALYTICAL COMPARISON REFERENCES
 # ==============================================================================
 
-def direct_control_reference(q: float, h_crit: float) -> float:
-    """
-    Direct-control baseline:
-
-        P_direct = q ^ h_crit
-
-    This is a comparison reference only and is not used to decide V_G acceptance.
-    """
-    if h_crit <= 0:
-        return 1.0
-
-    return float(q ** h_crit)
-
-
-def bounded_inference_theorem_reference(
-    q: float,
-    h_crit: float,
-    cfg: SimulationConfig
+def exact_injective_direct_control_probability(
+    population_size: int,
+    coalition_size: int,
+    critical_count: int,
 ) -> float:
     """
-    CNVS-style theorem reference for Test 10.
-
-    Test 10 does not use the explicit h_min parameter of Test 11. It models
-    dependent inference through p_infer_cap and p_identity_after_infer.
-
-    Therefore, for comparison only, the effective compromise probability is:
-
-        p_eff = q + (1 - q) * p_infer_cap * p_identity_after_infer
-
-    and the plotted theorem-style reference is:
-
-        theorem_ref = p_eff ^ h_crit
-
-    Interpretation:
-      - q covers direct verifier compromise;
-      - p_infer_cap bounds inference of a missing critical selector;
-      - p_identity_after_infer bounds whether the inferred selector also obtains
-        a valid identity proof;
-      - h_crit is the average critical-selector threshold observed in the run.
-
-    This curve is not used by the executable V_G pipeline.
+    Exact probability that every critical fragment is directly assigned to the
+    coalition under injective assignment without replacement.
     """
-    if h_crit <= 0:
+    if critical_count <= 0:
         return 1.0
 
-    p_infer_with_identity = cfg.p_infer_cap * cfg.p_identity_after_infer
-    p_eff = q + (1.0 - q) * p_infer_with_identity
-    p_eff = max(0.0, min(1.0, p_eff))
+    if coalition_size < critical_count:
+        return 0.0
 
-    return float(p_eff ** h_crit)
+    return (
+        math.comb(
+            coalition_size,
+            critical_count,
+        )
+        / math.comb(
+            population_size,
+            critical_count,
+        )
+    )
 
 
-def enrich_test10_results_with_references(
-    results: List[Dict[str, Any]],
-    cfg: SimulationConfig
+def simplified_injective_inference_reference(
+    population_size: int,
+    coalition_size: int,
+    critical_count: int,
+    p_indirect_control: float,
+) -> float:
+    """
+    Simplified comparison reference.
+
+    Direct assignment is treated exactly through the hypergeometric law.
+    Every honest-assigned critical selector is then independently and indirectly
+    controlled with probability p_indirect_control.
+
+    This is a comparison model, not the dependent topology process executed by
+    make_adversary_view and not a theorem proved here.
+    """
+    if critical_count <= 0:
+        return 1.0
+
+    if not 0.0 <= p_indirect_control <= 1.0:
+        raise ValueError(
+            "p_indirect_control must lie in [0, 1]."
+        )
+
+    denominator = math.comb(
+        population_size,
+        critical_count,
+    )
+
+    probability = 0.0
+
+    minimum_direct = max(
+        0,
+        critical_count
+        - (
+            population_size
+            - coalition_size
+        ),
+    )
+
+    maximum_direct = min(
+        critical_count,
+        coalition_size,
+    )
+
+    for direct_count in range(
+        minimum_direct,
+        maximum_direct + 1,
+    ):
+        honest_count = (
+            critical_count
+            - direct_count
+        )
+
+        assignment_probability = (
+            math.comb(
+                coalition_size,
+                direct_count,
+            )
+            * math.comb(
+                population_size
+                - coalition_size,
+                honest_count,
+            )
+            / denominator
+        )
+
+        probability += (
+            assignment_probability
+            * (
+                p_indirect_control
+                ** honest_count
+            )
+        )
+
+    return probability
+
+
+def wilson_interval(
+    successes: int,
+    trials: int,
+    z: float = 1.959963984540054,
+) -> Tuple[float, float]:
+    if trials <= 0:
+        raise ValueError(
+            "trials must be positive."
+        )
+
+    p_hat = successes / trials
+    z_squared = z * z
+
+    denominator = (
+        1.0
+        + z_squared / trials
+    )
+
+    centre = (
+        p_hat
+        + z_squared
+        / (
+            2.0 * trials
+        )
+    ) / denominator
+
+    half_width = (
+        z
+        * math.sqrt(
+            p_hat
+            * (
+                1.0 - p_hat
+            )
+            / trials
+            + z_squared
+            / (
+                4.0
+                * trials
+                * trials
+            )
+        )
+        / denominator
+    )
+
+    return (
+        max(
+            0.0,
+            centre - half_width,
+        ),
+        min(
+            1.0,
+            centre + half_width,
+        ),
+    )
+
+
+# ==============================================================================
+# PROGRESSIVE MASS-COLLUSION EXPERIMENT
+# ==============================================================================
+
+def run_single_collusion_size(
+    cfg: SimulationConfig,
+    coalition_size: int,
+    trials: int,
+    seed_offset: int = 0,
+) -> Dict[str, Any]:
+    blind_false_accepts = 0
+    disclosure_false_accepts = 0
+    disclosure_solver_found = 0
+    all_critical_controlled = 0
+
+    controlled_counts: List[int] = []
+    h_values: List[int] = []
+    metadata_edges_seen: List[int] = []
+
+    for trial in range(
+        trials
+    ):
+        state_seed = (
+            cfg.seed
+            + seed_offset
+            + 10 * trial
+        )
+
+        adversary_seed = (
+            cfg.seed
+            + seed_offset
+            + 10 * trial
+            + 1
+        )
+
+        blind_seed = (
+            cfg.seed
+            + seed_offset
+            + 10 * trial
+            + 2
+        )
+
+        disclosure_seed = (
+            cfg.seed
+            + seed_offset
+            + 10 * trial
+            + 3
+        )
+
+        state = build_refreshed_cnvs_instance(
+            instance_id=(
+                f"instance_{coalition_size}_{trial}"
+            ),
+            n_verifiers=cfg.n_verifiers,
+            seed=state_seed,
+            payload=default_payload(),
+        )
+
+        adversary = make_adversary_view(
+            state=state,
+            cfg=cfg,
+            coalition_size=coalition_size,
+            rnd=random.Random(
+                adversary_seed
+            ),
+        )
+
+        blind_ok, controlled, h_crit = blind_forgery_attempt(
+            state=state,
+            adversary=adversary,
+            cfg=cfg,
+            rnd=random.Random(
+                blind_seed
+            ),
+        )
+
+        disclosure_adversary = replace(
+            adversary,
+            C_int_leaked=True,
+        )
+
+        disclosure_ok, solver_found = Cint_disclosure_attack(
+            state=state,
+            adversary=disclosure_adversary,
+            cfg=cfg,
+            rnd=random.Random(
+                disclosure_seed
+            ),
+        )
+
+        controlled_counts.append(
+            controlled
+        )
+
+        h_values.append(
+            h_crit
+        )
+
+        metadata_edges_seen.append(
+            len(
+                adversary.leaked_metadata_edges
+            )
+        )
+
+        if controlled == h_crit:
+            all_critical_controlled += 1
+
+        if blind_ok:
+            blind_false_accepts += 1
+
+        if solver_found:
+            disclosure_solver_found += 1
+
+        if disclosure_ok:
+            disclosure_false_accepts += 1
+
+    actual_q = (
+        coalition_size
+        / cfg.n_verifiers
+    )
+
+    average_h = statistics.mean(
+        h_values
+    )
+
+    p_indirect_reference = (
+        cfg.p_infer_cap
+        * cfg.p_identity_after_infer
+    )
+
+    direct_reference = (
+        exact_injective_direct_control_probability(
+            population_size=cfg.n_verifiers,
+            coalition_size=coalition_size,
+            critical_count=int(
+                round(
+                    average_h
+                )
+            ),
+        )
+    )
+
+    inference_reference = (
+        simplified_injective_inference_reference(
+            population_size=cfg.n_verifiers,
+            coalition_size=coalition_size,
+            critical_count=int(
+                round(
+                    average_h
+                )
+            ),
+            p_indirect_control=(
+                p_indirect_reference
+            ),
+        )
+    )
+
+    all_ci = wilson_interval(
+        all_critical_controlled,
+        trials,
+    )
+
+    blind_ci = wilson_interval(
+        blind_false_accepts,
+        trials,
+    )
+
+    disclosure_ci = wilson_interval(
+        disclosure_false_accepts,
+        trials,
+    )
+
+    return {
+        "coalition_size": coalition_size,
+        "actual_q": actual_q,
+        "avg_h_crit": average_h,
+        "avg_controlled_critical": statistics.mean(
+            controlled_counts
+        ),
+        "max_controlled_critical": max(
+            controlled_counts
+        ),
+        "avg_leaked_edges": statistics.mean(
+            metadata_edges_seen
+        ),
+        "all_critical_controlled_count": all_critical_controlled,
+        "all_critical_controlled_rate": (
+            all_critical_controlled
+            / trials
+        ),
+        "all_critical_ci_low": all_ci[0],
+        "all_critical_ci_high": all_ci[1],
+        "blind_false_accept_count": blind_false_accepts,
+        "blind_false_accept_rate": (
+            blind_false_accepts
+            / trials
+        ),
+        "blind_false_accept_ci_low": blind_ci[0],
+        "blind_false_accept_ci_high": blind_ci[1],
+        "Cint_disclosure_solver_found_count": disclosure_solver_found,
+        "Cint_disclosure_solver_found_rate": (
+            disclosure_solver_found
+            / trials
+        ),
+        "Cint_disclosure_false_accept_count": disclosure_false_accepts,
+        "Cint_disclosure_false_accept_rate": (
+            disclosure_false_accepts
+            / trials
+        ),
+        "Cint_disclosure_ci_low": disclosure_ci[0],
+        "Cint_disclosure_ci_high": disclosure_ci[1],
+        "exact_direct_reference": direct_reference,
+        "simplified_inference_reference": inference_reference,
+        "trials": trials,
+    }
+
+
+def default_coalition_sizes(
+    n_verifiers: int,
+) -> List[int]:
+    nominal_fractions = [
+        0.10,
+        0.20,
+        0.30,
+        0.40,
+        0.50,
+        0.60,
+        0.65,
+        0.70,
+        0.75,
+        0.80,
+        0.85,
+        0.90,
+        0.95,
+        0.98,
+        0.99,
+        1.00,
+    ]
+
+    sizes = {
+        max(
+            0,
+            min(
+                n_verifiers,
+                round(
+                    fraction
+                    * n_verifiers
+                ),
+            ),
+        )
+        for fraction in nominal_fractions
+    }
+
+    sizes.add(
+        n_verifiers
+    )
+
+    return sorted(
+        sizes
+    )
+
+
+def run_progressive_mass_collusion(
+    cfg: SimulationConfig,
+    coalition_sizes: Optional[Sequence[int]] = None,
 ) -> List[Dict[str, Any]]:
-    enriched = []
+    sizes = (
+        list(coalition_sizes)
+        if coalition_sizes is not None
+        else default_coalition_sizes(
+            cfg.n_verifiers
+        )
+    )
 
-    for row in results:
-        q = float(row["coalition_fraction"])
-        h_crit = float(row["avg_h_crit"])
+    results: List[Dict[str, Any]] = []
 
-        new_row = dict(row)
-        new_row["direct_control_reference"] = direct_control_reference(q, h_crit)
-        new_row["theorem_reference"] = bounded_inference_theorem_reference(q, h_crit, cfg)
+    for index, coalition_size in enumerate(
+        sizes
+    ):
+        print(
+            f"Running coalition size {coalition_size}/{cfg.n_verifiers} "
+            f"({coalition_size / cfg.n_verifiers:.4f})..."
+        )
 
-        enriched.append(new_row)
+        results.append(
+            run_single_collusion_size(
+                cfg=cfg,
+                coalition_size=coalition_size,
+                trials=cfg.trials,
+                seed_offset=(
+                    10_000_000
+                    * index
+                ),
+            )
+        )
 
-    return enriched
+    return results
 
+
+def print_progressive_mass_collusion_results(
+    results: Sequence[Mapping[str, Any]],
+) -> None:
+    print(
+        "\n================ PROGRESSIVE MASS COLLUSION ================\n"
+    )
+
+    header = (
+        "r/Q       | avg_h | avg_ctrl | P(all critical) "
+        "| P(blind false accept) | P(C_int disclosure false accept)"
+    )
+
+    print(
+        header
+    )
+
+    print(
+        "-" * len(
+            header
+        )
+    )
+
+    for result in results:
+        print(
+            f"{result['coalition_size']:2d}/{64:<2d} "
+            f"({100.0 * result['actual_q']:6.2f}%) | "
+            f"{result['avg_h_crit']:5.2f} | "
+            f"{result['avg_controlled_critical']:8.3f} | "
+            f"{result['all_critical_controlled_rate']:15.8f} | "
+            f"{result['blind_false_accept_rate']:21.8f} | "
+            f"{result['Cint_disclosure_false_accept_rate']:31.8f}"
+        )
+
+    print(
+        "\nZero observed events are reported with Wilson 95% intervals "
+        "in the stored result rows and are not interpreted as zero probability."
+    )
+
+
+# ==============================================================================
+# PLOTTING
+# ==============================================================================
 
 def plot_progressive_mass_collusion_comparison(
-    ordinary_results: List[Dict[str, Any]],
-    leak_results: List[Dict[str, Any]],
-    ordinary_cfg: SimulationConfig,
+    results: Sequence[Mapping[str, Any]],
+    cfg: SimulationConfig,
     out_dir: Path,
-    show_plots: bool = True
+    *,
+    show_plots: bool = True,
 ) -> None:
-    """
-    Generates and displays Test 10 comparison plots.
+    out_dir.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
 
-    Output:
-      - test_10_threshold_breach_vs_theorem_reference.png
-      - test_10_false_accept_vs_cint_leak_logscale.png
-      - test_10_controlled_critical_vs_threshold.png
+    x = [
+        100.0
+        * float(
+            result["actual_q"]
+        )
+        for result in results
+    ]
 
-    If show_plots=True, the figures are also displayed in notebook / Colab output.
-    """
-    out_dir.mkdir(parents=True, exist_ok=True)
+    p_all = [
+        float(
+            result[
+                "all_critical_controlled_rate"
+            ]
+        )
+        for result in results
+    ]
 
-    ordinary = enrich_test10_results_with_references(ordinary_results, ordinary_cfg)
-    leak = leak_results
+    p_false = [
+        float(
+            result[
+                "blind_false_accept_rate"
+            ]
+        )
+        for result in results
+    ]
 
-    x = [100.0 * r["coalition_fraction"] for r in ordinary]
+    p_disclosure = [
+        float(
+            result[
+                "Cint_disclosure_false_accept_rate"
+            ]
+        )
+        for result in results
+    ]
 
-    p_all = [r["all_critical_controlled_rate"] for r in ordinary]
-    p_false = [r["blind_false_accept_rate"] for r in ordinary]
-    p_leak = [r["Cint_leak_break_rate"] for r in leak]
+    direct_reference = [
+        float(
+            result[
+                "exact_direct_reference"
+            ]
+        )
+        for result in results
+    ]
 
-    direct_ref = [r["direct_control_reference"] for r in ordinary]
-    theorem_ref = [r["theorem_reference"] for r in ordinary]
+    inference_reference = [
+        float(
+            result[
+                "simplified_inference_reference"
+            ]
+        )
+        for result in results
+    ]
 
-    avg_h = [r["avg_h_crit"] for r in ordinary]
-    avg_ctrl = [r["avg_controlled_critical"] for r in ordinary]
-    max_ctrl = [r["max_controlled_critical"] for r in ordinary]
+    average_h = [
+        float(
+            result[
+                "avg_h_crit"
+            ]
+        )
+        for result in results
+    ]
 
-    floor = 1.0 / max(1, ordinary_cfg.trials)
+    average_controlled = [
+        float(
+            result[
+                "avg_controlled_critical"
+            ]
+        )
+        for result in results
+    ]
+
+    maximum_controlled = [
+        float(
+            result[
+                "max_controlled_critical"
+            ]
+        )
+        for result in results
+    ]
+
+    detection_floor = (
+        1.0
+        / max(
+            1,
+            cfg.trials,
+        )
+    )
 
     # --------------------------------------------------------------------------
-    # Plot 1: threshold breach vs theorem-style references.
+    # Plot 1: complete-control probability and analytical references.
     # --------------------------------------------------------------------------
-
-    plt.figure(figsize=(12, 7))
+    plt.figure(
+        figsize=(12, 7)
+    )
 
     plt.plot(
         x,
         p_all,
         marker="o",
-        label="Observed P(all critical controlled)"
+        label="Observed P(all critical controlled)",
     )
 
     plt.plot(
         x,
-        direct_ref,
+        direct_reference,
         linestyle="--",
         marker="s",
-        label="Direct-control reference q^h_crit"
+        label="Exact injective direct-control reference",
     )
 
     plt.plot(
         x,
-        theorem_ref,
+        inference_reference,
         linestyle=":",
         marker="^",
-        label="Theorem-style bounded inference reference"
+        label=(
+            "Simplified injective independent-inference reference"
+        ),
     )
 
-    plt.xlabel("Peripheral verifier compromise q (%)")
-    plt.ylabel("Probability")
-    plt.title("CNVS Test 10: Threshold Breach vs Theorem-Style References")
-    plt.grid(True, linestyle="--", linewidth=0.5, alpha=0.65)
-    plt.legend()
-    plt.tight_layout()
-
-    output_1 = out_dir / "test_10_threshold_breach_vs_theorem_reference.png"
-    plt.savefig(output_1, dpi=300)
-
-    if show_plots:
-        plt.show()
-
-    plt.close()
-
-    # --------------------------------------------------------------------------
-    # Plot 2: ordinary false acceptance vs C_int leakage boundary, log scale.
-    # --------------------------------------------------------------------------
-
-    plt.figure(figsize=(12, 7))
-
-    plt.semilogy(
-        x,
-        [max(v, floor) for v in p_false],
-        marker="o",
-        label="Observed P(false accept), ordinary C_pub-only model"
+    plt.xlabel(
+        "Actual colluding verifier fraction q (%)"
     )
 
-    plt.semilogy(
-        x,
-        [max(v, floor) for v in p_leak],
-        marker="s",
-        label="Observed P(C_int leak break), leakage boundary"
+    plt.ylabel(
+        "Probability"
     )
 
-    plt.semilogy(
-        x,
-        [max(v, floor) for v in theorem_ref],
-        linestyle=":",
-        marker="^",
-        label="Theorem-style bounded inference reference"
+    plt.title(
+        "CNVS Test 10: Complete Critical Control and Injective References"
     )
 
-    plt.xlabel("Peripheral verifier compromise q (%)")
-    plt.ylabel(f"Probability, log scale; floor = 1 / {ordinary_cfg.trials}")
-    plt.title("CNVS Test 10: Ordinary False Acceptance vs C_int Leakage Boundary")
-    plt.grid(True, which="both", linestyle="--", linewidth=0.5, alpha=0.65)
-    plt.legend()
-    plt.tight_layout()
-
-    output_2 = out_dir / "test_10_false_accept_vs_cint_leak_logscale.png"
-    plt.savefig(output_2, dpi=300)
-
-    if show_plots:
-        plt.show()
-
-    plt.close()
-
-    # --------------------------------------------------------------------------
-    # Plot 3: average critical control growth.
-    # --------------------------------------------------------------------------
-
-    plt.figure(figsize=(12, 7))
-
-    plt.plot(
-        x,
-        avg_ctrl,
-        marker="o",
-        label="Average controlled critical selectors"
-    )
-
-    plt.plot(
-        x,
-        avg_h,
+    plt.grid(
+        True,
         linestyle="--",
-        label="Average h_crit threshold"
+        linewidth=0.5,
+        alpha=0.65,
     )
 
-    plt.plot(
-        x,
-        max_ctrl,
-        linestyle=":",
-        marker="s",
-        label="Maximum controlled critical selectors"
-    )
-
-    plt.xlabel("Peripheral verifier compromise q (%)")
-    plt.ylabel("Critical selector count")
-    plt.title("CNVS Test 10: Controlled Critical Selectors vs h_crit Threshold")
-    plt.grid(True, linestyle="--", linewidth=0.5, alpha=0.65)
     plt.legend()
     plt.tight_layout()
 
-    output_3 = out_dir / "test_10_controlled_critical_vs_threshold.png"
-    plt.savefig(output_3, dpi=300)
+    output_1 = (
+        out_dir
+        / "test_10_complete_control_vs_injective_references.png"
+    )
+
+    plt.savefig(
+        output_1,
+        dpi=300,
+    )
 
     if show_plots:
         plt.show()
 
     plt.close()
 
-    print("\n[Plot Output]")
-    print(f"Saved: {output_1}")
-    print(f"Saved: {output_2}")
-    print(f"Saved: {output_3}")
-    print(f"Absolute folder: {out_dir.resolve()}")
+    # --------------------------------------------------------------------------
+    # Plot 2: executed ordinary and disclosure false acceptance.
+    # --------------------------------------------------------------------------
+    plt.figure(
+        figsize=(12, 7)
+    )
+
+    plt.semilogy(
+        x,
+        [
+            max(
+                value,
+                detection_floor,
+            )
+            for value in p_false
+        ],
+        marker="o",
+        label=(
+            "Observed blind false acceptance "
+            "(zero observations plotted at detection floor)"
+        ),
+    )
+
+    plt.semilogy(
+        x,
+        [
+            max(
+                value,
+                detection_floor,
+            )
+            for value in p_disclosure
+        ],
+        marker="s",
+        label=(
+            "Executed C_int-disclosure false acceptance "
+            "(zero observations plotted at detection floor)"
+        ),
+    )
+
+    plt.xlabel(
+        "Actual colluding verifier fraction q (%)"
+    )
+
+    plt.ylabel(
+        "Observed rate, logarithmic scale"
+    )
+
+    plt.title(
+        "CNVS Test 10: Executed False-State Acceptance Experiments"
+    )
+
+    plt.grid(
+        True,
+        which="both",
+        linestyle="--",
+        linewidth=0.5,
+        alpha=0.65,
+    )
+
+    plt.legend()
+    plt.tight_layout()
+
+    output_2 = (
+        out_dir
+        / "test_10_executed_false_acceptance_logscale.png"
+    )
+
+    plt.savefig(
+        output_2,
+        dpi=300,
+    )
+
+    if show_plots:
+        plt.show()
+
+    plt.close()
+
+    # --------------------------------------------------------------------------
+    # Plot 3: controlled critical count.
+    # --------------------------------------------------------------------------
+    plt.figure(
+        figsize=(12, 7)
+    )
+
+    plt.plot(
+        x,
+        average_controlled,
+        marker="o",
+        label="Average controlled critical selectors",
+    )
+
+    plt.plot(
+        x,
+        average_h,
+        linestyle="--",
+        label="Critical-selector threshold h_crit",
+    )
+
+    plt.plot(
+        x,
+        maximum_controlled,
+        linestyle=":",
+        marker="s",
+        label="Maximum controlled critical selectors",
+    )
+
+    plt.xlabel(
+        "Actual colluding verifier fraction q (%)"
+    )
+
+    plt.ylabel(
+        "Critical selector count"
+    )
+
+    plt.title(
+        "CNVS Test 10: Controlled Critical Selectors vs Full-Coverage Threshold"
+    )
+
+    plt.grid(
+        True,
+        linestyle="--",
+        linewidth=0.5,
+        alpha=0.65,
+    )
+
+    plt.legend()
+    plt.tight_layout()
+
+    output_3 = (
+        out_dir
+        / "test_10_controlled_critical_vs_threshold.png"
+    )
+
+    plt.savefig(
+        output_3,
+        dpi=300,
+    )
+
+    if show_plots:
+        plt.show()
+
+    plt.close()
+
+    print(
+        "\n[Plot Output]"
+    )
+
+    print(
+        "Saved:",
+        output_1,
+    )
+
+    print(
+        "Saved:",
+        output_2,
+    )
+
+    print(
+        "Saved:",
+        output_3,
+    )
+
+    print(
+        "Absolute folder:",
+        out_dir.resolve(),
+    )
+
+
+# ==============================================================================
+# RESULT SERIALIZATION
+# ==============================================================================
+
+def save_results_json(
+    results: Sequence[Mapping[str, Any]],
+    output_path: Path,
+) -> None:
+    output_path.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    with output_path.open(
+        "w",
+        encoding="utf-8",
+    ) as handle:
+        json.dump(
+            list(results),
+            handle,
+            indent=2,
+            ensure_ascii=False,
+        )
+
+
+# ==============================================================================
+# COMMAND-LINE INTERFACE
+# ==============================================================================
+
+def running_inside_notebook_kernel() -> bool:
+    """
+    Detect Jupyter or Google Colab execution.
+
+    Notebook kernels inject arguments such as:
+
+        -f /root/.local/share/jupyter/runtime/kernel-....json
+
+    These are kernel arguments, not Test 10 parameters.
+    """
+    launcher_name = Path(sys.argv[0]).name.lower()
+
+    return (
+        "ipykernel" in sys.modules
+        or "google.colab" in sys.modules
+        or launcher_name in {
+            "ipykernel_launcher.py",
+            "colab_kernel_launcher.py",
+        }
+    )
+
+
+def parse_arguments(
+    argv: Optional[Sequence[str]] = None,
+) -> argparse.Namespace:
+    """
+    Parse Test 10 options.
+
+    - Explicit argv: strict parsing.
+    - Ordinary terminal execution: strict parsing.
+    - Jupyter/Colab: parse Test 10 options and ignore only kernel-injected
+      arguments such as "-f kernel.json".
+    """
+    parser = argparse.ArgumentParser(
+        description=(
+            "Run the corrected CNVS Test 10 structural-semantic "
+            "mass-collusion experiment."
+        )
+    )
+
+    parser.add_argument(
+        "--trials",
+        type=int,
+        default=100_000,
+        help=(
+            "Monte Carlo trajectories per coalition size "
+            "(default: 100000)."
+        ),
+    )
+
+    parser.add_argument(
+        "--levels",
+        type=float,
+        nargs="*",
+        default=None,
+        help=(
+            "Optional nominal coalition fractions in [0,1]. "
+            "They are converted to unique integer coalition sizes."
+        ),
+    )
+
+    parser.add_argument(
+        "--no-show",
+        action="store_true",
+        help="Save plots without displaying them.",
+    )
+
+    if argv is not None:
+        return parser.parse_args(list(argv))
+
+    if running_inside_notebook_kernel():
+        arguments, ignored_arguments = parser.parse_known_args()
+
+        if ignored_arguments:
+            print(
+                "[Notebook compatibility] Ignored kernel arguments:",
+                " ".join(ignored_arguments),
+            )
+
+        return arguments
+
+    return parser.parse_args()
+
+
+def coalition_sizes_from_levels(
+    levels: Optional[Iterable[float]],
+    n_verifiers: int,
+) -> Optional[List[int]]:
+    if levels is None:
+        return None
+
+    sizes: Set[int] = set()
+
+    for level in levels:
+        if not 0.0 <= level <= 1.0:
+            raise ValueError(
+                "Every coalition level must lie in [0,1]."
+            )
+
+        sizes.add(
+            max(
+                0,
+                min(
+                    n_verifiers,
+                    round(
+                        level
+                        * n_verifiers
+                    ),
+                ),
+            )
+        )
+
+    return sorted(
+        sizes
+    )
 
 
 # ==============================================================================
 # MAIN
 # ==============================================================================
 
-if __name__ == "__main__":
+def main(
+    argv: Optional[Sequence[str]] = None,
+) -> None:
+    arguments = parse_arguments(argv)
 
-    TRIALS = 100_000
+    if arguments.trials <= 0:
+        raise ValueError(
+            "--trials must be positive."
+        )
 
-    ordinary_cfg = SimulationConfig(
-        trials=TRIALS,
+    cfg = SimulationConfig(
+        trials=arguments.trials,
         n_verifiers=64,
-        coalition_fraction=0.10,
-        gamma_top_leak=0.12,
+        edge_disclosure_probability=0.12,
         dependent_infer_base=0.015,
         dependent_infer_rho=0.35,
         p_infer_cap=0.45,
         p_identity_after_infer=0.15,
         blind_attempts=1,
-        C_int_leak_probability=0.0,
+        leak_solver_attempts=250,
         seed=42,
     )
 
-    scenario_full_refresh_attack(ordinary_cfg)
-
-    ordinary_results = run_progressive_mass_collusion(ordinary_cfg)
-
-    print_progressive_mass_collusion_results(
-        ordinary_results,
-        title="PROGRESSIVE MASS COLLUSION — ORDINARY MODEL (C_pub ONLY)"
+    scenario_full_refresh_attack(
+        cfg
     )
 
-    leakage_cfg = SimulationConfig(
-        trials=TRIALS,
-        n_verifiers=64,
-        coalition_fraction=0.10,
-        gamma_top_leak=0.12,
-        dependent_infer_base=0.015,
-        dependent_infer_rho=0.35,
-        p_infer_cap=0.45,
-        p_identity_after_infer=0.15,
-        blind_attempts=1,
-        C_int_leak_probability=1.0,
-        seed=4242,
+    coalition_sizes = coalition_sizes_from_levels(
+        arguments.levels,
+        cfg.n_verifiers,
     )
 
-    leak_results = run_progressive_mass_collusion(leakage_cfg)
+    results = run_progressive_mass_collusion(
+        cfg,
+        coalition_sizes=coalition_sizes,
+    )
 
     print_progressive_mass_collusion_results(
-        leak_results,
-        title="PROGRESSIVE MASS COLLUSION — C_int LEAKAGE BOUNDARY PROJECTION"
+        results
+    )
+
+    output_dir = (
+        Path(__file__).resolve().parent
+        / "test_10_figures"
     )
 
     plot_progressive_mass_collusion_comparison(
-        ordinary_results=ordinary_results,
-        leak_results=leak_results,
-        ordinary_cfg=ordinary_cfg,
-        out_dir=Path("figures/test_10"),
-        show_plots=True
+        results=results,
+        cfg=cfg,
+        out_dir=output_dir,
+        show_plots=not arguments.no_show,
     )
 
-    print("\n================ FINAL ARCHITECTURAL INTERPRETATION ================\n")
-    print("- Moving Target Defense: Each instance refreshes topology, binding, and invariant family C={c_i}.")
-    print("- Progressive mass collusion tested up to 100%.")
-    print("- P(all critical) measures threshold breach.")
-    print("- P(false accept) measures false global acceptance under the ordinary C_pub-only view.")
-    print("- The C_int leak run provides a theoretical upper-bound break model.")
-    print("- The theorem-style reference is plotted only as a comparison curve and is not used by V_G.")
+    results_path = (
+        output_dir
+        / "test_10_results.json"
+    )
+
+    save_results_json(
+        results,
+        results_path,
+    )
+
+    print(
+        "Saved:",
+        results_path,
+    )
+
+    print(
+        "\n================ FINAL ARCHITECTURAL INTERPRETATION ================\n"
+    )
+
+    print(
+        "- Every payload field belongs to at least one hidden semantic constraint."
+    )
+
+    print(
+        "- Every evidence message is bound to verifier, selector, instance, "
+        "observed value, and local-admissibility claim."
+    )
+
+    print(
+        "- Local admissibility is recomputed by the trusted global pipeline."
+    )
+
+    print(
+        "- Dependent inference receives one trial per unknown critical selector, "
+        "so p_infer_cap is an actual per-selector cap in this model."
+    )
+
+    print(
+        "- The ordinary blind attack and C_int-disclosure attack both construct "
+        "candidate states and execute V_G."
+    )
+
+    print(
+        "- The direct reference is exact for injective assignment; the inference "
+        "reference is explicitly a simplified comparison model."
+    )
+
+    print(
+        "- Results at nominal fractions are reported using actual integer "
+        "coalition sizes r/Q."
+    )
+
+    print(
+        "- Zero observed events are accompanied by Wilson confidence intervals "
+        "and are not interpreted as mathematical zero."
+    )
+
+
+if __name__ == "__main__":
+    main()
