@@ -152,7 +152,7 @@ The parameter k measures the broader distributed fragment universe.
 
 The difference k - m represents the topological camouflage layer that surrounds the critical subset.
 
-## 4. Engineering Meaning inside Test 12
+## 4. Engineering Meaning inside Test 13
 
 In Test 13, this behavior is represented by:
 
