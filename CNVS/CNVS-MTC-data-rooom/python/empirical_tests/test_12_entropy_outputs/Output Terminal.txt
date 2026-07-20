@@ -1,0 +1,44 @@
+==========================================================================================
+CNVS TEST 12 — ENTROPY-CALIBRATED THETA_C / R_int LEAKAGE
+==========================================================================================
+trials per cell: 100
+Theta_C levels: 0:0.000b, 1:1.000b, 2:2.000b, 4:4.000b, 6:6.000b, 8:8.000b, 10:10.000b, max:11.814b
+R_int levels: 0:0.000b, 1:1.000b, 2:2.000b, 3:3.000b, 4:4.000b, 5:5.000b, 6:6.000b, max:6.907b
+q values: (0.25, 0.5, 0.75, 0.9, 1.0)
+
+[equivalence regime]
+  h_Theta= 0.000, h_R= 0.000, h_joint= 0.000 -> P_FA=1.000000 [0.963007, 1.000000]
+  h_Theta= 6.000, h_R= 4.000, h_joint=10.000 -> P_FA=0.000000 [0.000000, 0.036993]
+  h_Theta=11.814, h_R= 6.907, h_joint=18.721 -> P_FA=0.000000 [0.000000, 0.036993]
+
+[identifying regime]
+  h_Theta= 0.000, h_R= 0.000, h_joint= 0.000 -> P_FA=0.000000 [0.000000, 0.036993]
+  h_Theta= 6.000, h_R= 4.000, h_joint=10.000 -> P_FA=0.000000 [0.000000, 0.036993]
+  h_Theta=11.814, h_R= 6.907, h_joint=18.721 -> P_FA=0.000000 [0.000000, 0.036993]
+
+[ordinary CNVS separation at maximum configured entropy]
+  fixed h_Theta=11.813781 bits, fixed h_R=6.906891 bits
+  pure epistemic P_FA=0.00000000
+  q= 0.25 -> end-to-end rate=0.00000000
+  q= 0.50 -> end-to-end rate=0.00000000
+  q= 0.75 -> end-to-end rate=0.00000000
+  q= 0.90 -> end-to-end rate=0.00000000
+  q= 1.00 -> end-to-end rate=0.00000000
+
+[pathological Theta_C / R_int coupling control]
+  marginal h=0.000, joint h=0.000 -> P_FA=1.000000
+  marginal h=1.000, joint h=1.000 -> P_FA=0.550000
+  marginal h=2.000, joint h=2.000 -> P_FA=0.170000
+  marginal h=3.000, joint h=3.000 -> P_FA=0.080000
+  marginal h=4.000, joint h=4.000 -> P_FA=0.060000
+  marginal h=5.000, joint h=5.000 -> P_FA=0.050000
+  marginal h=6.000, joint h=6.000 -> P_FA=0.020000
+
+[control failures]
+  authentic_accept_failures: 0
+  baseline_noninferability_failures: 0
+  true_world_support_failures: 0
+  nested_support_failures: 0
+  identifying_false_acceptances: 0
+  equivalence_full_disclosure_failures: 0
+  q_entropy_coupling_failures: 0
