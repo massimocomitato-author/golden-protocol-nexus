@@ -31,6 +31,7 @@ They are designed to demonstrate that a candidate state may pass local syntactic
 | Test 9 | Structural Proof-of-Concept / Decoupled Pedagogical Validation Model | `test_09_structural_poc.py` |
 | Test 10 | Advanced Execution Environment / Full Structural-Semantic Model | `test_10_full_structural_semantic_model.py` |
 | Test 11 | Executable Fragmentation Sensitivity under Hidden Invariant Binding | `test_11_fragmentation_sensitivity.py` |
+| Test 12 | Entropically calibrated leakage model of Θ_C and R_int with executable construction of non-authentic candidates | `test_12_entropy_calibrated_topology_invariant_leakage.py` |
 
 ---
 
