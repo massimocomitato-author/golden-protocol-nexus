@@ -40,7 +40,7 @@ They are designed to address engineering limitations identified during red-team-
 
 The protocol engineering tests preserve the CNVS validation pipeline:
 
-```text
+
 V_L -> Cons_R -> Inv_C -> V_G
 but replace proof-of-concept engineering assumptions with stronger execution primitives.
 
@@ -151,14 +151,16 @@ fragment possession ≠ global reconstructability
 This is why the protocol-engineering tests separate k from m.
 
 The parameter m measures the critical fragmentation cardinality.
+
 The parameter k measures the broader distributed fragment universe.
+
 The difference k - m represents the topological camouflage layer that surrounds the critical subset.
 
 4. Engineering Meaning inside Test 13 and Test 14
 In the engineering tests, this behavior is represented by parameterizing the total active verifiers (Q or k) independently from the critical set (m):
 
+Plaintext
 k = max(MIN_TERMINAL_FRAGMENTS, TOPOLOGY_MULTIPLIER * m)
-
 This ensures that increasing m does not merely increase the number of critical fragments. It also expands the surrounding fragment universe.
 
 The result is a more realistic engineering model in which the adversary does not observe a clean set of only critical fragments. Instead, the adversary operates inside a larger mixed topology containing both critical and non-critical fragments.
