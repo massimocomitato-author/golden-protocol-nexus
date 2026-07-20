@@ -11,545 +11,1393 @@
 # SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 # ==============================================================================
 
+import argparse
+import json
 import math
-from pathlib import Path
+import sys
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 # ==============================================================================
-# Test Name: Test 11 - Executable Fragmentation Sensitivity under Hidden Invariant Binding
-# filename = "test_11_fragmentation_sensitivity_100k_2048_with_plots.py"
+# TEST 11 — EXECUTABLE FRAGMENTATION SENSITIVITY
 #
-# Purpose:
-#   This test extends the logic of CNVS Test 10.
+# Test Name: Test 11 - Executable Fragmentation Sensitivity under Hidden Full-State Binding
+# filename = "test_11_fragmentation_sensitivity.py"
 #
-#   Test 10 checks that peripheral verifier compromise does not imply global
-#   falsification while C_int remains hidden.
+# CLASSIFICATION:
+# This program is a reproducible Monte Carlo sensitivity experiment with a
+# structurally audited Global-Veto model.
 #
-#   Test 11 varies the critical fragmentation cardinality m inside an executable
-#   CNVS-like model and measures how the observed V_G acceptance probability
-#   changes as m increases.
+# It is NOT:
+#   - a formal proof of CNVS;
+#   - an empirical validation of a deployed CNVS implementation;
+#   - a false-state-acceptance experiment;
+#   - a full authentication / networking implementation.
 #
-# Core idea:
+# PRIMARY QUESTION:
+# How does the probability of reconstructing every critical fragment change as
+# the critical fragmentation cardinality m increases?
 #
-#   The test does NOT decide success using:
+# IMPORTANT SEMANTIC DISTINCTION:
+# The ordinary measured event is:
 #
-#       P(Rec*) <= [q + (1 - q) 2^(-h_min)]^m
+#   "the adversary reconstructed every hidden critical value, after which the
+#    authentic reconstructed state passed V_G."
 #
-#   Instead, every adversarial candidate is executed through:
+# It is NOT:
 #
-#       V_L -> Cons_R -> Inv_C -> V_G
+#   "V_G accepted a semantically false state."
 #
-#   The analytical formula is shown only as a comparison reference.
+# A separate deterministic false-state control mutates an already reconstructed
+# state and verifies that V_G rejects it.
 #
-# What is simulated:
-#   1. terminal fragments;
-#   2. hidden critical subset;
-#   3. local syntactic verification V_L;
-#   4. structural consistency Cons_R;
-#   5. hidden finite-field invariant binding Inv_C;
-#   6. global validation V_G;
-#   7. ordinary adversary with peripheral verifier compromise;
-#   8. C_int leak upper-bound control.
+# EXECUTION MODEL:
+#   1. The complete candidate state contains k terminal fragments.
+#   2. Every terminal fragment is protected by a hidden affine finite-field tag,
+#      so the implemented invariant family covers the full toy state.
+#   3. A hidden subset of m fragments is classified as reconstruction-critical.
+#   4. Non-critical values are treated as intact authenticated submissions from
+#      the honest aggregation path.
+#   5. Critical fragments assigned to the coalition are directly known.
+#   6. Every honest-assigned critical fragment is inferred independently with
+#      worst-case saturated probability:
 #
-# This is not a formal proof and not a full CNVS implementation.
-# It is an executable structural sensitivity test under explicit assumptions.
+#          p_inf = 2^(-h_min)
+#
+#   7. A failed inference produces a wrong but locally admissible field value.
+#   8. The statistical experiment samples the exact sufficient statistics of
+#      injective assignment:
+#
+#          X ~ Hypergeometric(Q, r, m)
+#
+#      followed by:
+#
+#          I | X ~ Binomial(m-X, p_inf)
+#
+#   9. Reconstruction succeeds exactly when X + I = m.
+#  10. A configurable sample of trajectories is materialized as candidate states
+#      and executed through scalar V_L -> Cons_R -> Inv_C -> V_G. The program
+#      aborts if structural execution disagrees with the sampled event.
+#
+# WHY SUFFICIENT-STATISTIC SAMPLING IS USED:
+# Generating a complete 2048-element random permutation for every one of
+# 100,000 trajectories at every (q,m) point would add large computational cost
+# without changing the distribution relevant to this experiment. Hypergeometric
+# sampling is the exact distribution induced by injective assignment.
+#
+# ANALYTICAL REFERENCES:
+#   - exact injective reconstruction probability:
+#
+#       sum_x Hypergeom(Q,r,m;x) * p_inf^(m-x)
+#
+#   - independent theorem-style upper reference:
+#
+#       [q_actual + (1-q_actual) p_inf]^m
+#
+# Neither reference decides an observed Monte Carlo trajectory.
+#
+# C_int DISCLOSURE CONTROL:
+# The hidden affine tags are intentionally reversible in this pedagogical model.
+# Full disclosure therefore permits reconstruction of the authentic critical
+# values. It does not automatically permit arbitrary false-state acceptance:
+# an additional mutation is executed and must be vetoed.
+#
+# NOTEBOOK COMPATIBILITY:
+# Jupyter and Google Colab inject kernel arguments such as '-f kernel.json'.
+# They are ignored only during notebook execution; terminal CLI parsing
+# remains strict so misspelled Test 11 options still raise an error.
 # ==============================================================================
 
 
 PRIME = 1_000_003
 
 
-@dataclass
+# ==============================================================================
+# DATA STRUCTURE
+# ==============================================================================
+
+@dataclass(frozen=True)
 class State:
     k: int
     m: int
-    true: np.ndarray
-    crit: np.ndarray
-    a: np.ndarray
-    b: np.ndarray
-    tag: np.ndarray
-    pairs: list
+
+    true_values: np.ndarray
+    critical_indices: np.ndarray
+
+    # Full-state hidden binding.
+    tag_a: np.ndarray
+    tag_b: np.ndarray
+    tags: np.ndarray
+
+    # Auxiliary critical cross-fragment constraints.
+    pair_left: np.ndarray
+    pair_right: np.ndarray
+    pair_coeff: np.ndarray
+    pair_target: np.ndarray
+
+
+# ==============================================================================
+# RUNTIME ENVIRONMENT HELPERS
+# ==============================================================================
+
+def running_inside_notebook_kernel() -> bool:
+    """
+    Detect Jupyter or Google Colab execution.
+
+    Notebook kernels commonly inject arguments such as:
+
+        -f /root/.local/share/jupyter/runtime/kernel-....json
+
+    These arguments belong to the notebook kernel, not to Test 11.
+    """
+    launcher_name = Path(sys.argv[0]).name.lower()
+
+    return (
+        "ipykernel" in sys.modules
+        or "google.colab" in sys.modules
+        or launcher_name in {
+            "ipykernel_launcher.py",
+            "colab_kernel_launcher.py",
+        }
+    )
+
+
+def runtime_base_directory() -> Path:
+    """
+    Return a writable base directory in both script and notebook execution.
+
+    - Executed as a .py file: directory containing the script.
+    - Pasted into a notebook cell: current notebook working directory.
+    """
+    script_filename = globals().get("__file__")
+
+    if script_filename:
+        return Path(script_filename).resolve().parent
+
+    return Path.cwd()
 
 
 # ==============================================================================
 # BASIC UTILITIES
 # ==============================================================================
 
-def inv_mod(a, p=PRIME):
-    return pow(int(a), p - 2, p)
+def validate_probability(
+    name: str,
+    value: float,
+    *,
+    allow_one: bool = True,
+) -> float:
+    value = float(value)
+
+    upper_ok = (
+        value <= 1.0
+        if allow_one
+        else value < 1.0
+    )
+
+    if (
+        not math.isfinite(value)
+        or value < 0.0
+        or not upper_ok
+    ):
+        upper_symbol = "<=" if allow_one else "<"
+        raise ValueError(
+            f"{name} must satisfy 0 <= {name} {upper_symbol} 1."
+        )
+
+    return value
 
 
-def p_inf_from_h(h_min):
+def inv_mod(
+    value: int,
+    modulus: int = PRIME,
+) -> int:
+    value = int(value) % modulus
+
+    if value == 0:
+        raise ValueError(
+            "Zero has no multiplicative inverse in the finite field."
+        )
+
+    return pow(
+        value,
+        modulus - 2,
+        modulus,
+    )
+
+
+def p_inf_from_h(
+    h_min: float,
+) -> float:
     """
-    Residual min-entropy interpretation:
-
-        H_inf(d_miss_i | View_adv_i) >= h_min
-
-    Therefore:
-
-        p_inf <= 2^(-h_min)
+    Worst-case saturation of:
+        p_inf <= 2^(-h_min).
     """
-    return 1.0 if h_min <= 0 else 2.0 ** (-float(h_min))
+    h_min = float(h_min)
+
+    if not math.isfinite(h_min) or h_min < 0.0:
+        raise ValueError(
+            "h_min must be a finite non-negative value."
+        )
+
+    return 2.0 ** (-h_min)
 
 
-def make_point_rng(seed_base: int, q_index: int, m_value: int, stream: int = 0):
+def make_point_rng(
+    seed_base: int,
+    coalition_size: int,
+    m_value: int,
+    stream: int = 0,
+) -> np.random.Generator:
+    sequence = np.random.SeedSequence(
+        [
+            int(seed_base),
+            int(coalition_size),
+            int(m_value),
+            int(stream),
+        ]
+    )
+
+    return np.random.default_rng(
+        sequence
+    )
+
+
+def wrong_value(
+    value: int,
+    rng: np.random.Generator,
+) -> int:
     """
-    Deterministic but separated seed construction.
-
-    Each (q, m) point receives an independent pseudo-random stream while remaining
-    reproducible for academic review.
+    Produce a different but locally admissible finite-field value.
     """
-    seed_sequence = np.random.SeedSequence([seed_base, q_index, int(m_value), stream])
-    return np.random.default_rng(seed_sequence)
+    offset = int(
+        rng.integers(
+            1,
+            PRIME,
+        )
+    )
+
+    return (
+        int(value)
+        + offset
+    ) % PRIME
 
 
 # ==============================================================================
 # STATE CONSTRUCTION
 # ==============================================================================
 
-def build_state(k, m, rng):
+def build_state(
+    k: int,
+    m: int,
+    rng: np.random.Generator,
+) -> State:
     """
-    Build a finite CNVS-like candidate state.
+    Build one fully bound toy state.
 
-    The state contains:
-      - k terminal fragments;
-      - m hidden critical fragments;
-      - one hidden algebraic C_int tag per critical fragment;
-      - hidden pairwise finite-field constraints among critical fragments.
+    Every terminal value is protected by a hidden affine tag:
+        tag_i = a_i x_i + b_i mod PRIME,
+    with a_i != 0.
 
-    Local verifiers do not know:
-      - critical subset;
-      - a, b, tag;
-      - pair constraints;
-      - global invariant binding.
+    Therefore, for fixed hidden parameters, each tag identifies exactly one
+    accepted finite-field value. The m critical indices determine which values
+    must be reconstructed by the adversary; the remaining values are treated as
+    intact authenticated contributions from the honest aggregation path.
     """
+    if not isinstance(k, int) or k <= 0:
+        raise ValueError(
+            "k must be a positive integer."
+        )
 
-    if m > k:
-        raise ValueError("m must be <= k. Critical fragments cannot exceed terminal fragments.")
+    if not isinstance(m, int) or not 1 <= m <= k:
+        raise ValueError(
+            "m must satisfy 1 <= m <= k."
+        )
 
-    true = rng.integers(0, PRIME, size=k, dtype=np.int64)
+    true_values = rng.integers(
+        0,
+        PRIME,
+        size=k,
+        dtype=np.int64,
+    )
 
-    crit = np.sort(
-        rng.choice(k, size=m, replace=False)
-    ).astype(int)
+    critical_indices = np.sort(
+        rng.choice(
+            k,
+            size=m,
+            replace=False,
+        )
+    ).astype(
+        np.int64
+    )
 
-    a = np.zeros(k, dtype=np.int64)
-    b = np.zeros(k, dtype=np.int64)
-    tag = np.zeros(k, dtype=np.int64)
+    tag_a = rng.integers(
+        1,
+        PRIME,
+        size=k,
+        dtype=np.int64,
+    )
 
-    # Hidden per-fragment invariant tag:
-    #
-    #     tag_i = a_i * value_i + b_i mod PRIME
-    #
-    # This is a finite-field proxy for hidden invariant binding.
-    for i in crit:
-        a[i] = rng.integers(1, PRIME)
-        b[i] = rng.integers(0, PRIME)
-        tag[i] = (a[i] * true[i] + b[i]) % PRIME
+    tag_b = rng.integers(
+        0,
+        PRIME,
+        size=k,
+        dtype=np.int64,
+    )
 
-    # Hidden pairwise relational constraints:
-    #
-    #     target = x_i + c*x_j + x_i*x_j mod PRIME
-    #
-    # These constraints make V_G non-reducible to local syntactic validity.
-    pairs = []
+    tags = np.mod(
+        tag_a * true_values
+        + tag_b,
+        PRIME,
+    ).astype(
+        np.int64
+    )
 
-    for x, y in zip(crit[:-1], crit[1:]):
-        c = int(rng.integers(1, PRIME))
-        target = (
-            int(true[x])
-            + c * int(true[y])
-            + int(true[x]) * int(true[y])
-        ) % PRIME
+    if m > 1:
+        pair_left = critical_indices[:-1].copy()
+        pair_right = critical_indices[1:].copy()
 
-        pairs.append((int(x), int(y), c, target))
+        pair_coeff = rng.integers(
+            1,
+            PRIME,
+            size=m - 1,
+            dtype=np.int64,
+        )
 
-    return State(
+        left_values = true_values[
+            pair_left
+        ]
+
+        right_values = true_values[
+            pair_right
+        ]
+
+        pair_target = np.mod(
+            left_values
+            + pair_coeff * right_values
+            + left_values * right_values,
+            PRIME,
+        ).astype(
+            np.int64
+        )
+    else:
+        pair_left = np.empty(
+            0,
+            dtype=np.int64,
+        )
+
+        pair_right = np.empty(
+            0,
+            dtype=np.int64,
+        )
+
+        pair_coeff = np.empty(
+            0,
+            dtype=np.int64,
+        )
+
+        pair_target = np.empty(
+            0,
+            dtype=np.int64,
+        )
+
+    state = State(
         k=k,
         m=m,
-        true=true,
-        crit=crit,
-        a=a,
-        b=b,
-        tag=tag,
-        pairs=pairs
+        true_values=true_values,
+        critical_indices=critical_indices,
+        tag_a=tag_a,
+        tag_b=tag_b,
+        tags=tags,
+        pair_left=pair_left,
+        pair_right=pair_right,
+        pair_coeff=pair_coeff,
+        pair_target=pair_target,
     )
+
+    accepted, _, _, _ = V_G(
+        state,
+        state.true_values,
+    )
+
+    if not accepted:
+        raise RuntimeError(
+            "Fresh honest state failed its own hidden invariant family."
+        )
+
+    return state
 
 
 # ==============================================================================
 # V_L, Cons_R, Inv_C, V_G
 # ==============================================================================
 
-def V_L(values):
+def V_L(
+    values: np.ndarray,
+) -> np.ndarray:
     """
-    Local Verification V_L.
+    Local admissibility only.
 
-    V_L checks only local admissibility:
-      - value is inside the accepted finite-field domain.
-
-    It does not check truth.
-    It does not know hidden invariants.
-    It does not know global binding.
-
-    Therefore, wrong but well-formed values can pass V_L.
+    Every finite-field integer is locally admissible. This layer does not know
+    whether a value is true or globally consistent.
     """
-    return (values >= 0) & (values < PRIME)
+    array = np.asarray(
+        values
+    )
+
+    if array.ndim != 1:
+        return np.zeros(
+            array.size,
+            dtype=bool,
+        )
+
+    integer_type = np.issubdtype(
+        array.dtype,
+        np.integer,
+    )
+
+    if not integer_type:
+        return np.zeros(
+            array.shape,
+            dtype=bool,
+        )
+
+    return (
+        (array >= 0)
+        & (array < PRIME)
+    )
 
 
-def Cons_R(state, values, local_ok):
+def Cons_R(
+    state: State,
+    values: np.ndarray,
+    local_ok: np.ndarray,
+) -> bool:
     """
-    Relational/topological consistency proxy.
+    Structural completeness proxy.
 
-    In this finite test, Cons_R checks:
-      - the candidate has exactly k terminal values;
-      - all values passed V_L.
-
-    A full CNVS implementation would also check the complete typed topology R(t).
-    """
-    if len(values) != state.k:
-        return False
-
-    if len(local_ok) != state.k:
-        return False
-
-    if not bool(np.all(local_ok)):
-        return False
-
-    return True
-
-
-def Inv_C(state, values):
-    """
-    Hidden invariant binding Inv_C.
-
-    This is the global hidden layer.
-
-    It checks:
-      1. hidden algebraic tag for every critical fragment;
-      2. hidden pairwise relational constraints among critical fragments.
-
-    If a missing critical fragment is guessed incorrectly, it may pass V_L
-    but should fail Inv_C with overwhelming probability.
-    """
-
-    for i in state.crit:
-        if (
-            int(state.a[i]) * int(values[i])
-            + int(state.b[i])
-        ) % PRIME != int(state.tag[i]):
-            return False
-
-    for x, y, c, target in state.pairs:
-        if (
-            int(values[x])
-            + c * int(values[y])
-            + int(values[x]) * int(values[y])
-        ) % PRIME != target:
-            return False
-
-    return True
-
-
-def V_G(state, values):
-    """
-    Global Verification V_G.
-
-    V_G accepts only if:
-      - all terminal values pass V_L;
-      - Cons_R is satisfied;
-      - Inv_C is satisfied.
-
-    Otherwise, Global Veto is triggered.
-    """
-
-    local_ok = V_L(values)
-    local_layer_ok = bool(np.all(local_ok))
-
-    if not local_layer_ok:
-        return False, local_layer_ok, False, False
-
-    rel_ok = Cons_R(state, values, local_ok)
-
-    if not rel_ok:
-        return False, True, False, False
-
-    inv_ok = Inv_C(state, values)
-
-    if not inv_ok:
-        return False, True, True, False
-
-    return True, True, True, True
-
-
-# ==============================================================================
-# ADVERSARIAL MODEL
-# ==============================================================================
-
-def wrong_value(v, rng):
-    """
-    Wrong but locally admissible value.
-
-    It passes V_L, but should fail V_G if the fragment is critical.
-    """
-    return (int(v) + int(rng.integers(1, PRIME))) % PRIME
-
-
-def solve_from_Cint_leak(state, i):
-    """
-    Upper-bound C_int leak model.
-
-    If C_int is fully leaked, the adversary can invert:
-
-        tag_i = a_i * value_i + b_i mod PRIME
-
-    and reconstruct the critical value.
+    It verifies the exact terminal-vector cardinality and local admissibility.
+    It is not presented as a complete implementation of formal R_int.
     """
     return (
-        (int(state.tag[i]) - int(state.b[i]))
-        * inv_mod(state.a[i])
+        np.asarray(values).shape
+        == (state.k,)
+        and np.asarray(local_ok).shape
+        == (state.k,)
+        and bool(
+            np.all(
+                local_ok
+            )
+        )
+    )
+
+
+def Inv_C(
+    state: State,
+    values: np.ndarray,
+) -> bool:
+    """
+    Full-state hidden invariant binding.
+
+    1. Every terminal fragment must satisfy its hidden affine tag.
+    2. Critical neighboring fragments must satisfy auxiliary pair constraints.
+    """
+    candidate = np.asarray(
+        values,
+        dtype=np.int64,
+    )
+
+    calculated_tags = np.mod(
+        state.tag_a * candidate
+        + state.tag_b,
+        PRIME,
+    )
+
+    if not bool(
+        np.array_equal(
+            calculated_tags,
+            state.tags,
+        )
+    ):
+        return False
+
+    if state.pair_left.size:
+        left_values = candidate[
+            state.pair_left
+        ]
+
+        right_values = candidate[
+            state.pair_right
+        ]
+
+        calculated_pairs = np.mod(
+            left_values
+            + state.pair_coeff
+            * right_values
+            + left_values
+            * right_values,
+            PRIME,
+        )
+
+        if not bool(
+            np.array_equal(
+                calculated_pairs,
+                state.pair_target,
+            )
+        ):
+            return False
+
+    return True
+
+
+def V_G(
+    state: State,
+    values: np.ndarray,
+) -> Tuple[bool, bool, bool, bool]:
+    """
+    Execute:
+        V_L -> Cons_R -> Inv_C -> V_G.
+    """
+    candidate = np.asarray(
+        values
+    )
+
+    local_ok = V_L(
+        candidate
+    )
+
+    local_layer_ok = (
+        candidate.shape
+        == (state.k,)
+        and local_ok.shape
+        == (state.k,)
+        and bool(
+            np.all(
+                local_ok
+            )
+        )
+    )
+
+    if not local_layer_ok:
+        return (
+            False,
+            False,
+            False,
+            False,
+        )
+
+    relational_ok = Cons_R(
+        state,
+        candidate,
+        local_ok,
+    )
+
+    if not relational_ok:
+        return (
+            False,
+            True,
+            False,
+            False,
+        )
+
+    invariant_ok = Inv_C(
+        state,
+        candidate,
+    )
+
+    if not invariant_ok:
+        return (
+            False,
+            True,
+            True,
+            False,
+        )
+
+    return (
+        True,
+        True,
+        True,
+        True,
+    )
+
+
+# ==============================================================================
+# CANDIDATE MATERIALIZATION AND STRUCTURAL AUDIT
+# ==============================================================================
+
+def materialize_candidate(
+    state: State,
+    failed_critical_count: int,
+    rng: np.random.Generator,
+) -> np.ndarray:
+    """
+    Materialize one representative candidate for a sampled trajectory.
+
+    All intact non-critical evidence remains authentic. When one or more critical
+    inferences fail, the corresponding critical values are replaced by wrong but
+    locally admissible field values.
+    """
+    if not 0 <= failed_critical_count <= state.m:
+        raise ValueError(
+            "failed_critical_count must lie in [0,m]."
+        )
+
+    candidate = np.array(
+        state.true_values,
+        copy=True,
+    )
+
+    if failed_critical_count == 0:
+        return candidate
+
+    failed_indices = rng.choice(
+        state.critical_indices,
+        size=failed_critical_count,
+        replace=False,
+    )
+
+    for index in failed_indices:
+        candidate[int(index)] = wrong_value(
+            candidate[int(index)],
+            rng,
+        )
+
+    return candidate
+
+
+def audit_structural_equivalence(
+    state: State,
+    failed_counts: np.ndarray,
+    audit_trajectories: int,
+    rng: np.random.Generator,
+) -> int:
+    """
+    Execute sampled trajectories through scalar V_G.
+
+    The Monte Carlo sufficient-statistic event and scalar structural execution
+    must agree exactly. Any disagreement aborts the experiment.
+    """
+    if audit_trajectories <= 0:
+        return 0
+
+    audit_count = min(
+        int(audit_trajectories),
+        int(failed_counts.size),
+    )
+
+    audit_indices = rng.choice(
+        failed_counts.size,
+        size=audit_count,
+        replace=False,
+    )
+
+    for trajectory_index in audit_indices:
+        failure_count = int(
+            failed_counts[
+                trajectory_index
+            ]
+        )
+
+        candidate = materialize_candidate(
+            state=state,
+            failed_critical_count=failure_count,
+            rng=rng,
+        )
+
+        accepted, local_ok, relational_ok, invariant_ok = V_G(
+            state,
+            candidate,
+        )
+
+        expected_acceptance = (
+            failure_count == 0
+        )
+
+        if accepted is not expected_acceptance:
+            raise AssertionError(
+                "Scalar V_G execution disagreed with the sampled "
+                "critical-reconstruction event."
+            )
+
+        if failure_count > 0:
+            if not (
+                local_ok
+                and relational_ok
+                and not invariant_ok
+            ):
+                raise AssertionError(
+                    "A wrong but locally admissible critical value did not "
+                    "produce the expected Local-Pass / Global-Veto path."
+                )
+
+    return audit_count
+
+
+# ==============================================================================
+# C_int DISCLOSURE AND FALSE-STATE CONTROLS
+# ==============================================================================
+
+def solve_from_Cint_disclosure(
+    state: State,
+    index: int,
+) -> int:
+    """
+    Reconstruct the unique affine-tag-consistent value after full C_int
+    disclosure.
+    """
+    return (
+        (
+            int(
+                state.tags[
+                    index
+                ]
+            )
+            - int(
+                state.tag_b[
+                    index
+                ]
+            )
+        )
+        * inv_mod(
+            int(
+                state.tag_a[
+                    index
+                ]
+            )
+        )
     ) % PRIME
 
 
-def make_adversarial_values(
-    state,
-    assigned,
-    malicious_set,
-    p_inf,
-    rng,
-    mode="ordinary"
-):
+def execute_Cint_disclosure_controls(
+    state: State,
+    rng: np.random.Generator,
+) -> Dict[str, bool]:
     """
-    Construct adversarial candidate evidence.
+    Distinguish secrecy collapse from integrity collapse.
 
-    ordinary mode:
-      - directly compromised critical fragments are known;
-      - missing critical fragments are inferred with probability p_inf;
-      - failed missing fragments receive wrong but locally admissible values.
-
-    cint_leak mode:
-      - C_int is fully exfiltrated;
-      - the attacker reconstructs all critical values from hidden parameters.
-
-    The candidate is then evaluated by V_G.
+    1. Full C_int disclosure reconstructs all critical authentic values.
+    2. The reconstructed authentic state is accepted.
+    3. A subsequent false mutation is still vetoed.
     """
+    reconstructed = np.array(
+        state.true_values,
+        copy=True,
+    )
 
-    values = np.array(state.true, copy=True)
+    for index in state.critical_indices:
+        reconstructed[int(index)] = solve_from_Cint_disclosure(
+            state,
+            int(index),
+        )
 
-    direct = 0
-    inferred = 0
-    failed = 0
+    reconstruction_matches_truth = bool(
+        np.array_equal(
+            reconstructed[
+                state.critical_indices
+            ],
+            state.true_values[
+                state.critical_indices
+            ],
+        )
+    )
 
-    for i in state.crit:
-        i = int(i)
+    reconstruction_accepts = V_G(
+        state,
+        reconstructed,
+    )[0]
 
-        if mode == "cint_leak":
-            values[i] = solve_from_Cint_leak(state, i)
-            inferred += 1
-            continue
+    false_candidate = np.array(
+        reconstructed,
+        copy=True,
+    )
 
-        if mode != "ordinary":
-            raise ValueError("mode must be 'ordinary' or 'cint_leak'.")
+    mutation_index = int(
+        state.critical_indices[
+            0
+        ]
+    )
 
-        directly_compromised = int(assigned[i]) in malicious_set
+    false_candidate[
+        mutation_index
+    ] = wrong_value(
+        false_candidate[
+            mutation_index
+        ],
+        rng,
+    )
 
-        if directly_compromised:
-            values[i] = state.true[i]
-            direct += 1
+    false_state_accepts = V_G(
+        state,
+        false_candidate,
+    )[0]
 
-        else:
-            if rng.random() < p_inf:
-                values[i] = state.true[i]
-                inferred += 1
-            else:
-                values[i] = wrong_value(state.true[i], rng)
-                failed += 1
+    if not reconstruction_matches_truth:
+        raise AssertionError(
+            "C_int disclosure failed to reconstruct the authentic critical state."
+        )
 
-    return values, direct, inferred, failed
+    if not reconstruction_accepts:
+        raise AssertionError(
+            "Authentic reconstructed state failed V_G."
+        )
+
+    if false_state_accepts:
+        raise AssertionError(
+            "False state was accepted after C_int disclosure."
+        )
+
+    return {
+        "reconstruction_matches_truth": reconstruction_matches_truth,
+        "reconstruction_accepts": reconstruction_accepts,
+        "false_state_accepts": false_state_accepts,
+    }
+
+
+def execute_full_state_coverage_control(
+    state: State,
+    rng: np.random.Generator,
+) -> bool:
+    """
+    Mutate one terminal value, including a non-critical value when available.
+    Full-state hidden binding must reject the mutation.
+    """
+    non_critical = np.setdiff1d(
+        np.arange(
+            state.k,
+            dtype=np.int64,
+        ),
+        state.critical_indices,
+        assume_unique=True,
+    )
+
+    if non_critical.size:
+        index = int(
+            non_critical[
+                0
+            ]
+        )
+    else:
+        index = int(
+            state.critical_indices[
+                0
+            ]
+        )
+
+    candidate = np.array(
+        state.true_values,
+        copy=True,
+    )
+
+    candidate[index] = wrong_value(
+        candidate[index],
+        rng,
+    )
+
+    rejected = not V_G(
+        state,
+        candidate,
+    )[0]
+
+    if not rejected:
+        raise AssertionError(
+            "Full-state coverage control failed: a terminal mutation was accepted."
+        )
+
+    return rejected
 
 
 # ==============================================================================
-# EXACT AND THEOREM REFERENCES
+# EXACT AND THEOREM-STYLE REFERENCES
 # ==============================================================================
 
-def log_comb(n, k):
+def log_combination(
+    n: int,
+    k: int,
+) -> float:
     if k < 0 or k > n:
-        return float("-inf")
+        return float(
+            "-inf"
+        )
 
     return (
-        math.lgamma(n + 1)
-        - math.lgamma(k + 1)
-        - math.lgamma(n - k + 1)
+        math.lgamma(
+            n + 1
+        )
+        - math.lgamma(
+            k + 1
+        )
+        - math.lgamma(
+            n - k + 1
+        )
     )
 
 
-def hypergeom_pmf(x, Q, r, m):
-    """
-    X = number of critical fragments directly assigned to malicious verifiers.
+def logsumexp(
+    values: Sequence[float],
+) -> float:
+    finite_values = [
+        value
+        for value in values
+        if math.isfinite(
+            value
+        )
+    ]
 
-    Since assignment is injective, X follows a hypergeometric law.
+    if not finite_values:
+        return float(
+            "-inf"
+        )
+
+    maximum = max(
+        finite_values
+    )
+
+    return (
+        maximum
+        + math.log(
+            sum(
+                math.exp(
+                    value - maximum
+                )
+                for value in finite_values
+            )
+        )
+    )
+
+
+def log_exact_injective_reference(
+    Q: int,
+    r: int,
+    m: int,
+    p_inf: float,
+) -> float:
     """
-    if x < 0 or x > r or x > m or (m - x) > (Q - r):
+    Natural logarithm of the exact injective reconstruction probability.
+    """
+    validate_probability(
+        "p_inf",
+        p_inf,
+    )
+
+    minimum_direct = max(
+        0,
+        m - (
+            Q - r
+        ),
+    )
+
+    maximum_direct = min(
+        m,
+        r,
+    )
+
+    denominator_log = log_combination(
+        Q,
+        m,
+    )
+
+    terms: List[float] = []
+
+    for direct_count in range(
+        minimum_direct,
+        maximum_direct + 1,
+    ):
+        missing_count = (
+            m
+            - direct_count
+        )
+
+        if p_inf == 0.0 and missing_count > 0:
+            continue
+
+        inference_log = (
+            0.0
+            if missing_count == 0
+            else missing_count
+            * math.log(
+                p_inf
+            )
+        )
+
+        terms.append(
+            log_combination(
+                r,
+                direct_count,
+            )
+            + log_combination(
+                Q - r,
+                missing_count,
+            )
+            - denominator_log
+            + inference_log
+        )
+
+    return logsumexp(
+        terms
+    )
+
+
+def log_theorem_reference(
+    q_actual: float,
+    m: int,
+    p_inf: float,
+) -> float:
+    """
+    Natural logarithm of:
+        [q_actual + (1-q_actual)p_inf]^m.
+    """
+    p_comp = (
+        q_actual
+        + (
+            1.0 - q_actual
+        )
+        * p_inf
+    )
+
+    if p_comp == 0.0:
+        return float(
+            "-inf"
+        )
+
+    return (
+        m
+        * math.log(
+            p_comp
+        )
+    )
+
+
+def probability_from_log(
+    log_probability: float,
+) -> float:
+    if not math.isfinite(
+        log_probability
+    ):
+        return 0.0
+
+    if log_probability < -745.0:
         return 0.0
 
     return math.exp(
-        log_comb(r, x)
-        + log_comb(Q - r, m - x)
-        - log_comb(Q, m)
+        log_probability
     )
 
 
-def exact_injective_reference(Q, r, m, p_inf):
-    """
-    Exact injective-assignment reference.
+def log10_from_log(
+    log_probability: float,
+) -> float:
+    if not math.isfinite(
+        log_probability
+    ):
+        return float(
+            "-inf"
+        )
 
-    This is not used to decide V_G acceptance.
-    It is plotted only to compare the executable result with the expected
-    injective-assignment reconstruction probability:
-
-        sum_x Hypergeom(Q, r, m; x) * p_inf^(m-x)
-    """
-    total = 0.0
-
-    for x in range(max(0, m - (Q - r)), min(m, r) + 1):
-        total += hypergeom_pmf(x, Q, r, m) * (p_inf ** (m - x))
-
-    return total
+    return (
+        log_probability
+        / math.log(
+            10.0
+        )
+    )
 
 
-def theorem_reference(q, m, p_inf):
-    """
-    Compact CNVS theorem-style reference:
+def wilson_interval(
+    successes: int,
+    trials: int,
+    z: float = 1.959963984540054,
+) -> Tuple[float, float]:
+    if trials <= 0:
+        raise ValueError(
+            "trials must be positive."
+        )
 
-        p_comp = q + (1 - q) * p_inf
+    estimate = (
+        successes
+        / trials
+    )
 
-        theorem_ref = p_comp^m
+    z_squared = (
+        z * z
+    )
 
-    This curve is not used to decide V_G acceptance.
-    """
-    p_comp = q + (1.0 - q) * p_inf
-    return p_comp ** m
+    denominator = (
+        1.0
+        + z_squared
+        / trials
+    )
+
+    centre = (
+        estimate
+        + z_squared
+        / (
+            2.0
+            * trials
+        )
+    ) / denominator
+
+    half_width = (
+        z
+        * math.sqrt(
+            estimate
+            * (
+                1.0 - estimate
+            )
+            / trials
+            + z_squared
+            / (
+                4.0
+                * trials
+                * trials
+            )
+        )
+        / denominator
+    )
+
+    return (
+        max(
+            0.0,
+            centre
+            - half_width,
+        ),
+        min(
+            1.0,
+            centre
+            + half_width,
+        ),
+    )
 
 
 # ==============================================================================
-# SIMULATION
+# MONTE CARLO SIMULATION
 # ==============================================================================
 
 def simulate_one_m(
-    Q,
-    q,
-    m,
-    h_min,
-    iterations,
-    rng,
-    terminal_fragments,
-):
+    Q: int,
+    coalition_size: int,
+    m: int,
+    h_min: float,
+    iterations: int,
+    rng: np.random.Generator,
+    terminal_fragments: int,
+    audit_trajectories: int,
+) -> Dict[str, Any]:
     """
-    Simulate one fragmentation level m.
-
-    In this high-resolution variant, the total number of terminal fragments is
-    fixed at terminal_fragments = 2048, while m varies up to 2048.
+    Simulate one exact injective-assignment fragmentation point.
     """
+    if not isinstance(Q, int) or Q <= 0:
+        raise ValueError(
+            "Q must be a positive integer."
+        )
 
-    if not (0 <= q < 1):
-        raise ValueError("q must satisfy 0 <= q < 1.")
+    if not isinstance(coalition_size, int) or not (
+        0 <= coalition_size <= Q
+    ):
+        raise ValueError(
+            "coalition_size must satisfy 0 <= r <= Q."
+        )
 
-    r = min(max(int(round(q * Q)), 0), Q - 1)
-    k = int(terminal_fragments)
+    if not isinstance(iterations, int) or iterations <= 0:
+        raise ValueError(
+            "iterations must be positive."
+        )
+
+    k = int(
+        terminal_fragments
+    )
 
     if k > Q:
         raise ValueError(
-            f"Injective assignment requires k <= Q, but k={k} and Q={Q}. "
-            "Increase Q or reduce terminal_fragments."
+            "Injective assignment requires terminal_fragments <= Q."
         )
 
-    if m > k:
+    if not 1 <= m <= k:
         raise ValueError(
-            f"Critical fragments m={m} cannot exceed terminal fragments k={k}."
+            "m must satisfy 1 <= m <= terminal_fragments."
         )
 
-    p_inf = p_inf_from_h(h_min)
-    state = build_state(k, m, rng)
-
-    honest_accept, _, _, _ = V_G(state, state.true)
-
-    if not honest_accept:
-        raise RuntimeError("Honest state rejected: invalid test construction.")
-
-    malicious = set(range(r))
-
-    accepted = 0
-    veto = 0
-    local_pass_global_veto = 0
-
-    direct_total = 0
-    inferred_total = 0
-    failed_total = 0
-
-    for _ in range(iterations):
-
-        # Injective assignment: one fragment, one verifier.
-        assigned = rng.choice(Q, size=k, replace=False)
-
-        candidate, d, inf, fail = make_adversarial_values(
-            state=state,
-            assigned=assigned,
-            malicious_set=malicious,
-            p_inf=p_inf,
-            rng=rng,
-            mode="ordinary"
-        )
-
-        acc, local_ok, rel_ok, inv_ok = V_G(state, candidate)
-
-        direct_total += d
-        inferred_total += inf
-        failed_total += fail
-
-        if acc:
-            accepted += 1
-        else:
-            veto += 1
-
-            if local_ok and rel_ok:
-                local_pass_global_veto += 1
-
-    # C_int leak control.
-    assigned = rng.choice(Q, size=k, replace=False)
-
-    leaked_candidate, _, _, _ = make_adversarial_values(
-        state=state,
-        assigned=assigned,
-        malicious_set=malicious,
-        p_inf=p_inf,
-        rng=rng,
-        mode="cint_leak"
+    q_actual = (
+        coalition_size
+        / Q
     )
 
-    leak_accept, _, _, _ = V_G(state, leaked_candidate)
+    p_inf = p_inf_from_h(
+        h_min
+    )
 
-    exact_ref = exact_injective_reference(Q, r, m, p_inf)
-    theorem_ref = theorem_reference(q, m, p_inf)
+    state = build_state(
+        k,
+        m,
+        rng,
+    )
+
+    # X = number of critical fragments directly assigned to the coalition.
+    direct_counts = rng.hypergeometric(
+        ngood=coalition_size,
+        nbad=Q - coalition_size,
+        nsample=m,
+        size=iterations,
+    ).astype(
+        np.int32
+    )
+
+    missing_counts = (
+        m
+        - direct_counts
+    ).astype(
+        np.int32
+    )
+
+    inferred_counts = rng.binomial(
+        missing_counts,
+        p_inf,
+    ).astype(
+        np.int32
+    )
+
+    failed_counts = (
+        missing_counts
+        - inferred_counts
+    ).astype(
+        np.int32
+    )
+
+    reconstruction_success = (
+        failed_counts == 0
+    )
+
+    success_count = int(
+        np.count_nonzero(
+            reconstruction_success
+        )
+    )
+
+    veto_count = (
+        iterations
+        - success_count
+    )
+
+    ci_low, ci_high = wilson_interval(
+        success_count,
+        iterations,
+    )
+
+    audited = audit_structural_equivalence(
+        state=state,
+        failed_counts=failed_counts,
+        audit_trajectories=audit_trajectories,
+        rng=rng,
+    )
+
+    disclosure_controls = execute_Cint_disclosure_controls(
+        state,
+        rng,
+    )
+
+    full_state_coverage_rejects = execute_full_state_coverage_control(
+        state,
+        rng,
+    )
+
+    exact_log = log_exact_injective_reference(
+        Q=Q,
+        r=coalition_size,
+        m=m,
+        p_inf=p_inf,
+    )
+
+    theorem_log = log_theorem_reference(
+        q_actual=q_actual,
+        m=m,
+        p_inf=p_inf,
+    )
+
+    if (
+        exact_log
+        > theorem_log
+        + 1e-10
+    ):
+        raise AssertionError(
+            "Exact injective probability exceeded the independent "
+            "theorem-style reference."
+        )
 
     return {
-        "q": q,
-        "r": r,
+        "Q": Q,
+        "coalition_size": coalition_size,
+        "q_actual": q_actual,
         "k": k,
         "m": m,
-        "h_min": h_min,
+        "h_min": float(
+            h_min
+        ),
         "p_inf": p_inf,
-        "VG_accept_ordinary": accepted / iterations,
-        "VG_veto_ordinary": veto / iterations,
-        "local_pass_global_veto": local_pass_global_veto / iterations,
-        "Cint_leak_accepts": bool(leak_accept),
-        "exact_injective_reference": exact_ref,
-        "theorem_reference": theorem_ref,
-        "avg_direct": direct_total / iterations,
-        "avg_inferred": inferred_total / iterations,
-        "avg_failed": failed_total / iterations,
+
+        "iterations": iterations,
+        "structurally_audited_trajectories": audited,
+
+        "reconstruction_success_count": success_count,
+        "reconstruction_accept_rate": (
+            success_count
+            / iterations
+        ),
+        "reconstruction_ci_low": ci_low,
+        "reconstruction_ci_high": ci_high,
+
+        "global_veto_rate": (
+            veto_count
+            / iterations
+        ),
+        "local_pass_global_veto_rate": (
+            veto_count
+            / iterations
+        ),
+
+        "exact_injective_reference": probability_from_log(
+            exact_log
+        ),
+        "exact_injective_log10": log10_from_log(
+            exact_log
+        ),
+
+        "theorem_reference": probability_from_log(
+            theorem_log
+        ),
+        "theorem_log10": log10_from_log(
+            theorem_log
+        ),
+
+        "avg_direct_critical": float(
+            np.mean(
+                direct_counts
+            )
+        ),
+        "avg_inferred_critical": float(
+            np.mean(
+                inferred_counts
+            )
+        ),
+        "avg_failed_critical": float(
+            np.mean(
+                failed_counts
+            )
+        ),
+
+        "Cint_disclosure_reconstructs_truth": disclosure_controls[
+            "reconstruction_matches_truth"
+        ],
+        "Cint_disclosure_reconstruction_accepts": disclosure_controls[
+            "reconstruction_accepts"
+        ],
+        "Cint_disclosure_false_state_accepts": disclosure_controls[
+            "false_state_accepts"
+        ],
+
+        "full_state_mutation_rejected": full_state_coverage_rejects,
     }
 
 
@@ -557,77 +1405,208 @@ def simulate_one_m(
 # PLOTTING
 # ==============================================================================
 
+def nearest_available_q(
+    results: Mapping[float, Sequence[Mapping[str, Any]]],
+    target_q: float,
+) -> float:
+    return min(
+        results.keys(),
+        key=lambda available_q: abs(
+            available_q
+            - target_q
+        ),
+    )
+
+
+def plot_probability_from_log10(
+    log10_value: float,
+    floor: float,
+) -> float:
+    floor_log10 = math.log10(
+        floor
+    )
+
+    if not math.isfinite(
+        log10_value
+    ):
+        return floor
+
+    return 10.0 ** max(
+        log10_value,
+        floor_log10,
+    )
+
+
 def plot_test11_comparisons(
-    results,
-    iterations,
-    out_dir,
-    selected_q_for_curves,
-    show_plots=True
-):
-    """
-    Generates and displays Test 11 comparison plots.
+    results: Mapping[float, Sequence[Mapping[str, Any]]],
+    iterations: int,
+    out_dir: Path,
+    selected_q_for_curves: Sequence[float],
+    *,
+    show_plots: bool = True,
+) -> None:
+    out_dir.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
 
-    Output:
-      - test_11_selected_q_vg_acceptance_vs_references.png
-      - test_11_all_points_empirical_vs_references.png
-      - test_11_local_pass_global_veto_heatmap.png
-      - test_11_max_fragmentation_vs_q.png
-
-    If show_plots=True, the figures are displayed in notebook / Colab output.
-    """
-
-    out_dir.mkdir(parents=True, exist_ok=True)
-    floor = 1.0 / max(1, iterations)
+    detection_floor = (
+        1.0
+        / max(
+            1,
+            iterations,
+        )
+    )
 
     # --------------------------------------------------------------------------
-    # Plot 1: selected q curves, empirical vs exact vs theorem.
+    # Plot 1: selected actual-q curves.
     # --------------------------------------------------------------------------
+    plt.figure(
+        figsize=(13, 8)
+    )
 
-    plt.figure(figsize=(13, 8))
+    used_q_values: Set[float] = set()
 
-    for q in selected_q_for_curves:
-        if q not in results:
+    for target_q in selected_q_for_curves:
+        actual_q = nearest_available_q(
+            results,
+            target_q,
+        )
+
+        if actual_q in used_q_values:
             continue
 
-        rows = results[q]
+        used_q_values.add(
+            actual_q
+        )
 
-        m_axis = np.array([r["m"] for r in rows])
-        empirical = np.array([r["VG_accept_ordinary"] for r in rows])
-        exact_ref = np.array([r["exact_injective_reference"] for r in rows])
-        theorem_ref = np.array([r["theorem_reference"] for r in rows])
+        rows = results[
+            actual_q
+        ]
+
+        m_axis = np.array(
+            [
+                row["m"]
+                for row in rows
+            ],
+            dtype=float,
+        )
+
+        empirical = np.array(
+            [
+                max(
+                    row[
+                        "reconstruction_accept_rate"
+                    ],
+                    detection_floor,
+                )
+                for row in rows
+            ],
+            dtype=float,
+        )
+
+        exact_reference = np.array(
+            [
+                plot_probability_from_log10(
+                    row[
+                        "exact_injective_log10"
+                    ],
+                    detection_floor,
+                )
+                for row in rows
+            ],
+            dtype=float,
+        )
+
+        theorem_reference_values = np.array(
+            [
+                plot_probability_from_log10(
+                    row[
+                        "theorem_log10"
+                    ],
+                    detection_floor,
+                )
+                for row in rows
+            ],
+            dtype=float,
+        )
 
         plt.plot(
             m_axis,
-            np.maximum(empirical, floor),
+            empirical,
             marker="o",
-            label=f"Executable V_G, q={q:.2f}"
+            label=(
+                f"Monte Carlo reconstruction, "
+                f"q={actual_q:.4f}"
+            ),
         )
 
         plt.plot(
             m_axis,
-            np.maximum(exact_ref, floor),
+            exact_reference,
             linestyle="--",
-            label=f"Exact injective, q={q:.2f}"
+            label=(
+                f"Exact injective reference, "
+                f"q={actual_q:.4f}"
+            ),
         )
 
         plt.plot(
             m_axis,
-            np.maximum(theorem_ref, floor),
+            theorem_reference_values,
             linestyle=":",
-            label=f"Theorem ref, q={q:.2f}"
+            label=(
+                f"Independent upper reference, "
+                f"q={actual_q:.4f}"
+            ),
         )
 
-    plt.xscale("log", base=2)
-    plt.yscale("log")
-    plt.xlabel("Critical fragmentation cardinality m")
-    plt.ylabel(f"Unauthorized reconstruction / V_G acceptance probability; floor = 1 / {iterations}")
-    plt.title("CNVS Test 11: Executable V_G Acceptance vs Exact and Theorem References")
-    plt.grid(True, which="both", linestyle="--", linewidth=0.5, alpha=0.65)
-    plt.legend(fontsize=8, ncol=2)
+    plt.xscale(
+        "log",
+        base=2,
+    )
+
+    plt.yscale(
+        "log"
+    )
+
+    plt.xlabel(
+        "Critical fragmentation cardinality m"
+    )
+
+    plt.ylabel(
+        "Reconstruction probability / reference "
+        f"(zero observations plotted at 1/{iterations})"
+    )
+
+    plt.title(
+        "CNVS Test 11: Critical Reconstruction Sensitivity"
+    )
+
+    plt.grid(
+        True,
+        which="both",
+        linestyle="--",
+        linewidth=0.5,
+        alpha=0.65,
+    )
+
+    plt.legend(
+        fontsize=8,
+        ncol=2,
+    )
+
     plt.tight_layout()
 
-    output_1 = out_dir / "test_11_selected_q_vg_acceptance_vs_references.png"
-    plt.savefig(output_1, dpi=300)
+    output_1 = (
+        out_dir
+        / "test_11_selected_q_reconstruction_vs_references.png"
+    )
+
+    plt.savefig(
+        output_1,
+        dpi=300,
+    )
 
     if show_plots:
         plt.show()
@@ -635,60 +1614,116 @@ def plot_test11_comparisons(
     plt.close()
 
     # --------------------------------------------------------------------------
-    # Plot 2: all empirical points against exact and theorem references.
+    # Plot 2: empirical versus exact and upper references.
     # --------------------------------------------------------------------------
+    empirical_all: List[float] = []
+    exact_all: List[float] = []
+    theorem_all: List[float] = []
 
-    empirical_all = []
-    exact_all = []
-    theorem_all = []
+    for rows in results.values():
+        for row in rows:
+            empirical_all.append(
+                max(
+                    row[
+                        "reconstruction_accept_rate"
+                    ],
+                    detection_floor,
+                )
+            )
 
-    for _, rows in results.items():
-        for r in rows:
-            empirical_all.append(max(r["VG_accept_ordinary"], floor))
-            exact_all.append(max(r["exact_injective_reference"], floor))
-            theorem_all.append(max(r["theorem_reference"], floor))
+            exact_all.append(
+                plot_probability_from_log10(
+                    row[
+                        "exact_injective_log10"
+                    ],
+                    detection_floor,
+                )
+            )
 
-    empirical_all = np.array(empirical_all)
-    exact_all = np.array(exact_all)
-    theorem_all = np.array(theorem_all)
+            theorem_all.append(
+                plot_probability_from_log10(
+                    row[
+                        "theorem_log10"
+                    ],
+                    detection_floor,
+                )
+            )
 
-    min_axis = floor
-    max_axis = 1.0
-
-    plt.figure(figsize=(9, 9))
+    plt.figure(
+        figsize=(9, 9)
+    )
 
     plt.scatter(
         exact_all,
         empirical_all,
         marker="o",
-        label="Empirical vs exact injective reference"
+        label=(
+            "Monte Carlo versus exact injective reference"
+        ),
     )
 
     plt.scatter(
         theorem_all,
         empirical_all,
         marker="^",
-        label="Empirical vs theorem reference"
+        label=(
+            "Monte Carlo versus independent upper reference"
+        ),
     )
 
     plt.plot(
-        [min_axis, max_axis],
-        [min_axis, max_axis],
+        [
+            detection_floor,
+            1.0,
+        ],
+        [
+            detection_floor,
+            1.0,
+        ],
         linestyle="--",
-        label="Ideal alignment y = x"
+        label="y = x",
     )
 
-    plt.xscale("log")
-    plt.yscale("log")
-    plt.xlabel("Reference probability")
-    plt.ylabel("Observed executable V_G acceptance")
-    plt.title("CNVS Test 11: Empirical Acceptance vs Reference Curves")
-    plt.grid(True, which="both", linestyle="--", linewidth=0.5, alpha=0.65)
+    plt.xscale(
+        "log"
+    )
+
+    plt.yscale(
+        "log"
+    )
+
+    plt.xlabel(
+        "Reference probability"
+    )
+
+    plt.ylabel(
+        "Observed reconstruction rate"
+    )
+
+    plt.title(
+        "CNVS Test 11: Monte Carlo Reconstruction vs References"
+    )
+
+    plt.grid(
+        True,
+        which="both",
+        linestyle="--",
+        linewidth=0.5,
+        alpha=0.65,
+    )
+
     plt.legend()
     plt.tight_layout()
 
-    output_2 = out_dir / "test_11_all_points_empirical_vs_references.png"
-    plt.savefig(output_2, dpi=300)
+    output_2 = (
+        out_dir
+        / "test_11_empirical_vs_references.png"
+    )
+
+    plt.savefig(
+        output_2,
+        dpi=300,
+    )
 
     if show_plots:
         plt.show()
@@ -696,43 +1731,104 @@ def plot_test11_comparisons(
     plt.close()
 
     # --------------------------------------------------------------------------
-    # Plot 3: Local-pass / Global-Veto heatmap.
+    # Plot 3: local-pass / Global-Veto heatmap.
     # --------------------------------------------------------------------------
+    q_values = list(
+        results.keys()
+    )
 
-    q_values = list(results.keys())
-    m_values = [r["m"] for r in next(iter(results.values()))]
+    m_values = [
+        row["m"]
+        for row in next(
+            iter(
+                results.values()
+            )
+        )
+    ]
 
-    heatmap = np.array([
-        [r["local_pass_global_veto"] for r in results[q]]
-        for q in q_values
-    ])
+    heatmap = np.array(
+        [
+            [
+                row[
+                    "local_pass_global_veto_rate"
+                ]
+                for row in results[
+                    q_value
+                ]
+            ]
+            for q_value in q_values
+        ],
+        dtype=float,
+    )
 
-    plt.figure(figsize=(13, 8))
+    plt.figure(
+        figsize=(13, 8)
+    )
 
-    im = plt.imshow(
+    image = plt.imshow(
         heatmap,
         aspect="auto",
-        origin="lower"
+        origin="lower",
     )
 
-    plt.colorbar(im, label="Local-pass / Global-Veto rate")
+    plt.colorbar(
+        image,
+        label=(
+            "Locally admissible candidate rejected by hidden invariants"
+        ),
+    )
+
     plt.xticks(
-        ticks=np.arange(len(m_values)),
-        labels=[str(m) for m in m_values],
+        ticks=np.arange(
+            len(
+                m_values
+            )
+        ),
+        labels=[
+            str(
+                m_value
+            )
+            for m_value in m_values
+        ],
         rotation=45,
-        ha="right"
+        ha="right",
     )
+
     plt.yticks(
-        ticks=np.arange(len(q_values)),
-        labels=[f"{q:.2f}" for q in q_values]
+        ticks=np.arange(
+            len(
+                q_values
+            )
+        ),
+        labels=[
+            f"{q_value:.4f}"
+            for q_value in q_values
+        ],
     )
-    plt.xlabel("Critical fragmentation cardinality m")
-    plt.ylabel("Peripheral compromise q")
-    plt.title("CNVS Test 11: Non-Reducibility Heatmap")
+
+    plt.xlabel(
+        "Critical fragmentation cardinality m"
+    )
+
+    plt.ylabel(
+        "Actual colluding fraction r/Q"
+    )
+
+    plt.title(
+        "CNVS Test 11: Local-Pass / Global-Veto Sensitivity"
+    )
+
     plt.tight_layout()
 
-    output_3 = out_dir / "test_11_local_pass_global_veto_heatmap.png"
-    plt.savefig(output_3, dpi=300)
+    output_3 = (
+        out_dir
+        / "test_11_local_pass_global_veto_heatmap.png"
+    )
+
+    plt.savefig(
+        output_3,
+        dpi=300,
+    )
 
     if show_plots:
         plt.show()
@@ -740,31 +1836,66 @@ def plot_test11_comparisons(
     plt.close()
 
     # --------------------------------------------------------------------------
-    # Plot 4: max fragmentation vs q.
+    # Plot 4: maximum fragmentation versus actual q.
     # --------------------------------------------------------------------------
+    maximum_m = max(
+        m_values
+    )
 
-    max_m = max(m_values)
+    q_axis: List[float] = []
+    empirical_final: List[float] = []
+    exact_final: List[float] = []
+    theorem_final: List[float] = []
 
-    q_axis = []
-    empirical_final = []
-    exact_final = []
-    theorem_final = []
+    for actual_q, rows in results.items():
+        row = next(
+            item
+            for item in rows
+            if item["m"] == maximum_m
+        )
 
-    for q, rows in results.items():
-        row = next(r for r in rows if r["m"] == max_m)
+        q_axis.append(
+            actual_q
+        )
 
-        q_axis.append(q)
-        empirical_final.append(max(row["VG_accept_ordinary"], floor))
-        exact_final.append(max(row["exact_injective_reference"], floor))
-        theorem_final.append(max(row["theorem_reference"], floor))
+        empirical_final.append(
+            max(
+                row[
+                    "reconstruction_accept_rate"
+                ],
+                detection_floor,
+            )
+        )
 
-    plt.figure(figsize=(12, 7))
+        exact_final.append(
+            plot_probability_from_log10(
+                row[
+                    "exact_injective_log10"
+                ],
+                detection_floor,
+            )
+        )
+
+        theorem_final.append(
+            plot_probability_from_log10(
+                row[
+                    "theorem_log10"
+                ],
+                detection_floor,
+            )
+        )
+
+    plt.figure(
+        figsize=(12, 7)
+    )
 
     plt.semilogy(
         q_axis,
         empirical_final,
         marker="o",
-        label=f"Executable V_G acceptance at m={max_m}"
+        label=(
+            f"Monte Carlo reconstruction at m={maximum_m}"
+        ),
     )
 
     plt.semilogy(
@@ -772,7 +1903,9 @@ def plot_test11_comparisons(
         exact_final,
         linestyle="--",
         marker="s",
-        label=f"Exact injective reference at m={max_m}"
+        label=(
+            f"Exact injective reference at m={maximum_m}"
+        ),
     )
 
     plt.semilogy(
@@ -780,156 +1913,544 @@ def plot_test11_comparisons(
         theorem_final,
         linestyle=":",
         marker="^",
-        label=f"Theorem reference at m={max_m}"
+        label=(
+            f"Independent upper reference at m={maximum_m}"
+        ),
     )
 
-    plt.xlabel("Peripheral verifier compromise q")
-    plt.ylabel(f"Probability, log scale; floor = 1 / {iterations}")
-    plt.title(f"CNVS Test 11: Max Fragmentation m={max_m} vs q")
-    plt.grid(True, which="both", linestyle="--", linewidth=0.5, alpha=0.65)
+    plt.xlabel(
+        "Actual colluding verifier fraction r/Q"
+    )
+
+    plt.ylabel(
+        "Probability "
+        f"(zero observations plotted at 1/{iterations})"
+    )
+
+    plt.title(
+        f"CNVS Test 11: Maximum Fragmentation m={maximum_m}"
+    )
+
+    plt.grid(
+        True,
+        which="both",
+        linestyle="--",
+        linewidth=0.5,
+        alpha=0.65,
+    )
+
     plt.legend()
     plt.tight_layout()
 
-    output_4 = out_dir / "test_11_max_fragmentation_vs_q.png"
-    plt.savefig(output_4, dpi=300)
+    output_4 = (
+        out_dir
+        / "test_11_max_fragmentation_vs_actual_q.png"
+    )
+
+    plt.savefig(
+        output_4,
+        dpi=300,
+    )
 
     if show_plots:
         plt.show()
 
     plt.close()
 
-    print("\n[Plot Output]")
-    print(f"Saved: {output_1}")
-    print(f"Saved: {output_2}")
-    print(f"Saved: {output_3}")
-    print(f"Saved: {output_4}")
-    print(f"Absolute folder: {out_dir.resolve()}")
+    print(
+        "\n[Plot Output]"
+    )
+
+    for output in (
+        output_1,
+        output_2,
+        output_3,
+        output_4,
+    ):
+        print(
+            "Saved:",
+            output,
+        )
+
+    print(
+        "Absolute folder:",
+        out_dir.resolve(),
+    )
+
+
+# ==============================================================================
+# RESULT SERIALIZATION
+# ==============================================================================
+
+def save_results_json(
+    results: Mapping[float, Sequence[Mapping[str, Any]]],
+    output_path: Path,
+) -> None:
+    serializable = {
+        f"{actual_q:.12f}": list(
+            rows
+        )
+        for actual_q, rows in results.items()
+    }
+
+    output_path.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    with output_path.open(
+        "w",
+        encoding="utf-8",
+    ) as handle:
+        json.dump(
+            serializable,
+            handle,
+            indent=2,
+            ensure_ascii=False,
+        )
+
+
+# ==============================================================================
+# CONFIGURATION HELPERS
+# ==============================================================================
+
+DEFAULT_Q_LEVELS = [
+    0.33,
+    0.40,
+    0.45,
+    0.50,
+    0.55,
+    0.60,
+    0.65,
+    0.70,
+    0.75,
+    0.80,
+    0.85,
+    0.90,
+    0.95,
+    0.97,
+    0.98,
+    0.99,
+    1.00,
+]
+
+DEFAULT_M_VALUES = [
+    1,
+    2,
+    4,
+    8,
+    16,
+    32,
+    64,
+    128,
+    256,
+    512,
+    1024,
+    2048,
+]
+
+
+def coalition_sizes_from_levels(
+    Q: int,
+    q_levels: Iterable[float],
+) -> List[int]:
+    sizes = set()
+
+    for level in q_levels:
+        validate_probability(
+            "q level",
+            level,
+        )
+
+        sizes.add(
+            max(
+                0,
+                min(
+                    Q,
+                    round(
+                        float(level)
+                        * Q
+                    ),
+                ),
+            )
+        )
+
+    return sorted(
+        sizes
+    )
+
+
+def validate_m_values(
+    m_values: Iterable[int],
+    k: int,
+) -> List[int]:
+    validated = sorted(
+        {
+            int(
+                value
+            )
+            for value in m_values
+        }
+    )
+
+    if not validated:
+        raise ValueError(
+            "At least one m value is required."
+        )
+
+    for value in validated:
+        if not 1 <= value <= k:
+            raise ValueError(
+                f"Every m must satisfy 1 <= m <= {k}."
+            )
+
+    return validated
 
 
 # ==============================================================================
 # MAIN TEST RUN
 # ==============================================================================
 
-def run_test_11():
+def run_test_11(
+    *,
+    iterations: int = 100_000,
+    audit_trajectories: int = 32,
+    q_levels: Sequence[float] = DEFAULT_Q_LEVELS,
+    m_values: Sequence[int] = DEFAULT_M_VALUES,
+    show_plots: bool = True,
+) -> Dict[float, List[Dict[str, Any]]]:
+    Q = 2048
+    terminal_fragments = 2048
 
-    # ==========================================================================
-    # PARAMETERS
-    # ==========================================================================
+    h_min = 1.0
+    seed_base = 42
 
-    # Requested setup:
-    #
-    #   requested Q = 2000
-    #   terminal fragments = 2048
-    #
-    # Strict injective assignment requires:
-    #
-    #   Q >= k >= m
-    #
-    # Therefore, the effective Q is automatically raised to 2048 in order to
-    # preserve the one-fragment / one-verifier assumption instead of silently
-    # breaking the model.
-    Q_REQUESTED = 2000
-    TERMINAL_FRAGMENTS = 2048
-    Q = max(Q_REQUESTED, TERMINAL_FRAGMENTS)
+    coalition_sizes = coalition_sizes_from_levels(
+        Q,
+        q_levels,
+    )
 
-    H_MIN = 1.0
-    ITERATIONS = 100_000
-    SEED_BASE = 42
+    validated_m_values = validate_m_values(
+        m_values,
+        terminal_fragments,
+    )
 
-    Q_SCENARIOS = [
-        0.33, 0.40, 0.45, 0.50,
-        0.55, 0.60, 0.65, 0.70,
-        0.75, 0.80, 0.85, 0.90,
-        0.95, 0.97, 0.98, 0.99
+    selected_q_for_curves = [
+        0.50,
+        0.70,
+        0.90,
+        0.99,
+        1.00,
     ]
 
-    M_VALUES = [
-        1, 2, 4, 8, 16, 32,
-        64, 128, 256, 512, 1024, 2048
-    ]
+    output_dir = (
+        runtime_base_directory()
+        / "test_11_figures"
+    )
 
-    SELECTED_Q_FOR_CURVES = [0.50, 0.70, 0.90, 0.99]
+    results: Dict[
+        float,
+        List[
+            Dict[
+                str,
+                Any,
+            ]
+        ],
+    ] = {}
 
-    OUT_DIR = Path("figures/test_11")
+    print(
+        "\nCNVS Test 11: Executable Fragmentation Sensitivity"
+    )
 
-    results = {}
+    print(
+        "--------------------------------------------------"
+    )
 
-    print("\nCNVS Test 11: Executable Fragmentation Sensitivity Test")
-    print("-------------------------------------------------------")
-    print(f"Q_requested = {Q_REQUESTED}")
-    print(f"Q_effective = {Q}")
-    print(f"terminal_fragments k = {TERMINAL_FRAGMENTS}")
-    print(f"h_min = {H_MIN}")
-    print(f"iterations per point = {ITERATIONS}")
-    print(f"seed base = {SEED_BASE}")
-    print(f"q scenarios = {Q_SCENARIOS}")
-    print(f"m values = {M_VALUES}")
-    print("V_G acceptance is computed by executing V_L -> Cons_R -> Inv_C -> V_G.")
-    print("Exact and theorem references are shown only as comparison curves.")
-    print("Formula: theorem_ref = [q + (1 - q) * 2^(-h_min)]^m\n")
+    print(
+        f"Q = {Q}"
+    )
 
-    if Q != Q_REQUESTED:
-        print("[Injective Assignment Notice]")
-        print(
-            f"Requested Q={Q_REQUESTED} is smaller than terminal_fragments={TERMINAL_FRAGMENTS}. "
-            f"Effective Q has been raised to {Q} to preserve injective assignment.\n"
+    print(
+        f"terminal fragments k = {terminal_fragments}"
+    )
+
+    print(
+        f"h_min = {h_min}"
+    )
+
+    print(
+        f"p_inf = {p_inf_from_h(h_min)} "
+        "(worst-case saturated bound)"
+    )
+
+    print(
+        f"iterations per point = {iterations}"
+    )
+
+    print(
+        f"scalar V_G audit trajectories per point = "
+        f"{audit_trajectories}"
+    )
+
+    print(
+        f"coalition sizes = {coalition_sizes}"
+    )
+
+    print(
+        f"m values = {validated_m_values}"
+    )
+
+    print(
+        "\nMeasured event: complete reconstruction of every critical value, "
+        "followed by V_G acceptance of the authentic reconstructed state."
+    )
+
+    print(
+        "This is not a false-state-acceptance rate.\n"
+    )
+
+    for coalition_size in coalition_sizes:
+        actual_q = (
+            coalition_size
+            / Q
         )
 
-    for q_index, q in enumerate(Q_SCENARIOS):
+        rows: List[
+            Dict[
+                str,
+                Any,
+            ]
+        ] = []
 
-        rows = []
-
-        print(f"\n=== q = {q:.2f} ===")
         print(
-            "m | k | VG_accept | local-pass/VG-veto | "
-            "exact_ref | theorem_ref | C_int_leak"
+            f"\n=== r={coalition_size}/{Q}, "
+            f"q_actual={actual_q:.6f} ==="
         )
 
-        for m in M_VALUES:
+        print(
+            "m | reconstruct | 95% CI | local-pass/veto | "
+            "exact log10 | upper log10 | leak reconstructs | false leak state"
+        )
 
-            rng = make_point_rng(SEED_BASE, q_index, m)
-
-            out = simulate_one_m(
-                Q=Q,
-                q=q,
-                m=m,
-                h_min=H_MIN,
-                iterations=ITERATIONS,
-                rng=rng,
-                terminal_fragments=TERMINAL_FRAGMENTS,
+        for m in validated_m_values:
+            rng = make_point_rng(
+                seed_base=seed_base,
+                coalition_size=coalition_size,
+                m_value=m,
             )
 
-            rows.append(out)
+            output = simulate_one_m(
+                Q=Q,
+                coalition_size=coalition_size,
+                m=m,
+                h_min=h_min,
+                iterations=iterations,
+                rng=rng,
+                terminal_fragments=terminal_fragments,
+                audit_trajectories=audit_trajectories,
+            )
+
+            rows.append(
+                output
+            )
 
             print(
-                f"{m:4d} | {out['k']:4d} | "
-                f"{out['VG_accept_ordinary']:.8f} | "
-                f"{out['local_pass_global_veto']:.8f} | "
-                f"{out['exact_injective_reference']:.8f} | "
-                f"{out['theorem_reference']:.8f} | "
-                f"{out['Cint_leak_accepts']}"
+                f"{m:4d} | "
+                f"{output['reconstruction_accept_rate']:.8f} | "
+                f"[{output['reconstruction_ci_low']:.8f}, "
+                f"{output['reconstruction_ci_high']:.8f}] | "
+                f"{output['local_pass_global_veto_rate']:.8f} | "
+                f"{output['exact_injective_log10']:11.3f} | "
+                f"{output['theorem_log10']:11.3f} | "
+                f"{output['Cint_disclosure_reconstruction_accepts']} | "
+                f"{output['Cint_disclosure_false_state_accepts']}"
             )
 
-        results[q] = rows
+        results[
+            actual_q
+        ] = rows
 
     plot_test11_comparisons(
         results=results,
-        iterations=ITERATIONS,
-        out_dir=OUT_DIR,
-        selected_q_for_curves=SELECTED_Q_FOR_CURVES,
-        show_plots=True,
+        iterations=iterations,
+        out_dir=output_dir,
+        selected_q_for_curves=selected_q_for_curves,
+        show_plots=show_plots,
     )
 
-    print("\n================ FINAL INTERPRETATION ================\n")
-    print("- Test 11 was executed through V_L -> Cons_R -> Inv_C -> V_G.")
-    print("- Exact injective and theorem references were used only as comparison curves.")
-    print("- The theorem reference is [q + (1 - q) * 2^(-h_min)]^m.")
-    print("- The exact reference uses the hypergeometric injective-assignment law.")
-    print("- The local-pass / Global-Veto signal measures CNVS non-reducibility.")
-    print("- The C_int leak control confirms the expected upper-bound collapse scenario.")
+    results_path = (
+        output_dir
+        / "test_11_results.json"
+    )
+
+    save_results_json(
+        results,
+        results_path,
+    )
+
+    print(
+        "Saved:",
+        results_path,
+    )
+
+    print(
+        "\n================ FINAL INTERPRETATION ================\n"
+    )
+
+    print(
+        "- Every terminal fragment is covered by the hidden full-state binding."
+    )
+
+    print(
+        "- m identifies the hidden reconstruction-critical subset; intact "
+        "non-critical values are supplied by the honest aggregation path."
+    )
+
+    print(
+        "- Injective assignment is sampled exactly through its hypergeometric "
+        "sufficient statistic."
+    )
+
+    print(
+        "- Every audited sampled trajectory is materialized and executed through "
+        "V_L -> Cons_R -> Inv_C -> V_G."
+    )
+
+    print(
+        "- Exact injective and independent upper references are comparison curves "
+        "only and do not decide Monte Carlo outcomes."
+    )
+
+    print(
+        "- C_int disclosure collapses secrecy in this reversible toy binding, "
+        "but a deliberately false post-disclosure state remains vetoed."
+    )
+
+    print(
+        "- Zero observed reconstructions are accompanied by Wilson intervals and "
+        "are not interpreted as mathematical zero."
+    )
 
     return results
 
 
+# ==============================================================================
+# COMMAND-LINE INTERFACE
+# ==============================================================================
+
+def parse_arguments(
+    argv: Optional[Sequence[str]] = None,
+) -> argparse.Namespace:
+    """
+    Parse Test 11 options.
+
+    Behaviour:
+      - explicit argv: strict parsing;
+      - ordinary terminal execution: strict parsing;
+      - Jupyter / Colab: parse Test 11 options and ignore only kernel-injected
+        arguments such as "-f kernel.json".
+    """
+    parser = argparse.ArgumentParser(
+        description=(
+            "Run corrected CNVS Test 11 fragmentation sensitivity."
+        )
+    )
+
+    parser.add_argument(
+        "--iterations",
+        type=int,
+        default=100_000,
+        help=(
+            "Monte Carlo trajectories per (q,m) point "
+            "(default: 100000)."
+        ),
+    )
+
+    parser.add_argument(
+        "--audit-trajectories",
+        type=int,
+        default=32,
+        help=(
+            "Scalar V_G materialization audits per point "
+            "(default: 32)."
+        ),
+    )
+
+    parser.add_argument(
+        "--q-levels",
+        type=float,
+        nargs="*",
+        default=None,
+        help=(
+            "Optional nominal q levels in [0,1]. They are converted to unique "
+            "integer coalition sizes."
+        ),
+    )
+
+    parser.add_argument(
+        "--m-values",
+        type=int,
+        nargs="*",
+        default=None,
+        help=(
+            "Optional critical-fragment cardinalities."
+        ),
+    )
+
+    parser.add_argument(
+        "--no-show",
+        action="store_true",
+        help="Save plots without displaying them.",
+    )
+
+    if argv is not None:
+        return parser.parse_args(list(argv))
+
+    if running_inside_notebook_kernel():
+        arguments, ignored_arguments = parser.parse_known_args()
+
+        if ignored_arguments:
+            print(
+                "[Notebook compatibility] Ignored kernel arguments:",
+                " ".join(ignored_arguments),
+            )
+
+        return arguments
+
+    return parser.parse_args()
+
+
+def main(
+    argv: Optional[Sequence[str]] = None,
+) -> None:
+    arguments = parse_arguments(argv)
+
+    if arguments.iterations <= 0:
+        raise ValueError(
+            "--iterations must be positive."
+        )
+
+    if arguments.audit_trajectories < 0:
+        raise ValueError(
+            "--audit-trajectories cannot be negative."
+        )
+
+    run_test_11(
+        iterations=arguments.iterations,
+        audit_trajectories=arguments.audit_trajectories,
+        q_levels=(
+            DEFAULT_Q_LEVELS
+            if arguments.q_levels is None
+            else arguments.q_levels
+        ),
+        m_values=(
+            DEFAULT_M_VALUES
+            if arguments.m_values is None
+            else arguments.m_values
+        ),
+        show_plots=not arguments.no_show,
+    )
+
+
 if __name__ == "__main__":
-    run_test_11()
+    main()
