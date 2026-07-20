@@ -43,6 +43,20 @@ import matplotlib.pyplot as plt
 #   p_inf_i ≤ 2^(-h_min)
 #   p_comp = q + (1 - q) p_inf
 #   P(Rec*) ≤ p_comp^m
+#
+# SIMULATION CONVENTION:
+#   The min-entropy inequality is deliberately saturated in the simulation:
+#   p_inf := 2^(-h_min). This represents the worst admissible inference
+#   probability under the assumed residual min-entropy bound.
+#
+# DEPENDENCE MODEL USED IN THIS TEST:
+#   Direct compromises are NOT generated through independent assignments.
+#   They arise from randomized injective matching without replacement, which
+#   introduces finite-pool dependence between fragment assignments. Residual
+#   inference attempts are then projected with the constant worst-case bound
+#   p_inf = 2^(-h_min). The test is therefore a static stress projection of
+#   injective-assignment dependence plus bounded residual inference; it is not
+#   intended to reproduce every possible adaptive or time-evolving collusion.
 # ==============================================================================
 
 
@@ -88,8 +102,8 @@ def simulate_cnvs_dependent_collusion(
         Uniform residual conditional min-entropy margin.
     iterations : int
         Number of stochastic trials.
-    seed : int or None
-        Optional random seed for reproducibility.
+    seed : int, numpy.random.SeedSequence, or None
+        Optional random seed or deterministic child seed for reproducibility.
 
     Returns
     -------
@@ -150,7 +164,12 @@ def simulate_cnvs_dependent_collusion(
         m_missing = m_critical - m_direct
 
         # 3. RESIDUAL STRUCTURAL INFERENCE
-        # Simulating sequential inference attempts bounded by p_inf_bound
+        # The theoretical inequality p_inf ≤ 2^(-h_min) is deliberately
+        # saturated here, so every missing critical fragment is tested against
+        # the worst admissible constant inference probability p_inf_bound.
+        # These residual inference draws are conditionally projected as static
+        # Bernoulli trials; the assignment dependence has already been generated
+        # by the injective matching above.
         all_missing_inferred = True
 
         for _ in range(m_missing):
@@ -207,11 +226,26 @@ scenarios = {
     }
 }
 
+# The stress grid includes the formal collapse endpoint q = 1, where every
+# verifier belongs to the colluding coalition and systemic reconstruction must
+# occur with probability 1 under the assumed model.
 malicious_counts = np.unique(
-    np.linspace(0, Q_VERIFIERS - 1, 40, dtype=int)
+    np.append(
+        np.linspace(0, Q_VERIFIERS - 1, 40, dtype=int),
+        Q_VERIFIERS
+    )
 )
 
-plt.figure(figsize=(12, 8))
+# SEED is a master reproducibility seed. A distinct deterministic child seed is
+# generated for every (h_min, q) run. This preserves exact reproducibility while
+# avoiding the accidental reuse of the identical pseudo-random stream in every
+# curve and at every stress point.
+master_seed_sequence = np.random.SeedSequence(SEED)
+run_seeds = iter(
+    master_seed_sequence.spawn(len(scenarios) * len(malicious_counts))
+)
+
+plt.figure(figsize=(14, 8))
 plt.rcParams.update({"font.size": 11, "font.family": "serif"})
 
 for label, params in scenarios.items():
@@ -223,6 +257,8 @@ for label, params in scenarios.items():
     theorem_results = []
 
     for r_malicious in malicious_counts:
+        child_seed = next(run_seeds)
+
         result = simulate_cnvs_dependent_collusion(
             Q_verifiers=Q_VERIFIERS,
             r_malicious=int(r_malicious),
@@ -230,7 +266,7 @@ for label, params in scenarios.items():
             m_critical=M_CRITICAL,
             h_min_residual=h_val,
             iterations=ITERATIONS,
-            seed=None
+            seed=child_seed
         )
 
         q_values.append(result["q"])
@@ -271,7 +307,7 @@ plt.axvline(
 
 plt.title(
     "CNVS Dependent-Collusion Reconstruction Bound\n"
-    f"Statistical Projection over 100k Iterations "
+    f"Statistical Projection over {ITERATIONS:,} Iterations\n"
     f"($Q_v={Q_VERIFIERS}, k={K_FRAGMENTS}, m={M_CRITICAL}$)",
     pad=15
 )
