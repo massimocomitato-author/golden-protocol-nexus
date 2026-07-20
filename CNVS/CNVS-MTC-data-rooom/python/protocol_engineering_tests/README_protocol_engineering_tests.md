@@ -30,7 +30,7 @@ They are designed to address engineering limitations identified during red-team-
 
 | Test | Description | Recommended File |
 |---|---|---|
-| Test 12 | Engineering-Hardened 256-bit Fragmentation Sensitivity Test under Hidden Invariant Binding | `test_12_engineering_hardened_256bit_fragmentation.py` |
+| Test 13 | Engineering-Hardened 256-bit Fragmentation Sensitivity Test under Hidden Invariant Binding | `test_13_engineering_hardened_256bit_fragmentation.py` |
 
 ---
 
@@ -154,7 +154,7 @@ The difference k - m represents the topological camouflage layer that surrounds 
 
 ## 4. Engineering Meaning inside Test 12
 
-In Test 12, this behavior is represented by:
+In Test 13, this behavior is represented by:
 
 k = max(MIN_TERMINAL_FRAGMENTS, TOPOLOGY_MULTIPLIER * m)
 
@@ -206,12 +206,12 @@ They should be read as engineering-hardening artifacts, not as enterprise-ready 
 ```text
 protocol_engineering_tests/
 ├── README_protocol_engineering_tests.md
-├── test_12_engineering_hardened_256bit_fragmentation.py
+├── test_13_engineering_hardened_256bit_fragmentation.py
 ├── outputs/
 │   ├── logs/
 │   └── raw_results/
 └── outcome_tests/
-    └── test_12/
+    └── test_13/
 ```
 
 ---
