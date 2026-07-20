@@ -11,248 +11,868 @@
 # SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 # ==============================================================================
 
-
 import math
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mticker
+
 
 # ==============================================================================
-# CNVS THEOREM 4 STATISTICAL PROJECTION:
-# SYSTEMIC DESIGN FORMULA & MINIMUM CRITICAL FRAGMENTATION
+# CNVS EQUATION 42 DETERMINISTIC EXPLORATORY TEST:
+# MINIMUM CRITICAL FRAGMENTATION UNDER ASYMMETRIC TOPOLOGICAL EXPOSURE
 #
-# Test Name: Test 5 - Statistical Projection of Minimum Critical Fragmentation (mmin) under Asymmetric Topological Exposure.
+# Test Name: Test 5 - Deterministic Exploratory Test of the Minimum Critical Fragmentation Design Formula under Asymmetric Topological Exposure.
 # filename = "test_05_mmin_design_formula.py"
 #
 # PURPOSE:
-# This script projects the minimum number of critical low-inference fragments 
-# (m_min) required to satisfy a target systemic security threshold (eta), 
-# ASSUMING the formal validity of the CNVS design formula (Eq. 42):
+# This program is a deterministic design-space exploration.
 #
-#       P(Rec*) <= eta
+# It is NOT:
+#   - a Monte Carlo reconstruction test;
+#   - an empirical validation of CNVS;
+#   - a simulation of V_L, V_G, Cons_R, Inv_C, or adversarial state recovery;
+#   - an independent proof of Equation 42.
+#
+# It ASSUMES the formal CNVS design relation:
+#
+#       P(Rec*) <= p_comp^m
+#
+# and computes the minimum integer critical-fragment cardinality required to
+# satisfy a selected target reconstruction-risk limit eta:
+#
 #       m_min = ceil( ln(eta) / ln(p_comp) )
 #
-# FORMAL ASSUMPTIONS:
-#   1. p_comp = q + (1 - q) * p_inf
-#   2. p_inf <= 2^(-h_res)
-#   3. Target Security Boundary (eta): The maximum acceptable probability of 
-#      unauthorized reconstruction (e.g., 1e-6).
-#   4. Asymmetric Topological Exposure: The adversary captures non-uniform 
-#      topological components (modeled via Dirichlet distribution), which 
-#      dynamically erodes the residual min-entropy margin (h_res). 
-#   5. Semantic Feasibility Limit (m_max): A systemic boundary representing 
-#      the maximum number of critical fragments practically permissible.
+# with:
+#
+#       p_comp = q + (1 - q) p_inf
+#
+# and the worst-case saturation:
+#
+#       p_inf = 2^(-h_res)
+#
+# where the formal entropy bound is p_inf <= 2^(-h_res).
+#
+# TOPOLOGY-TO-ENTROPY EXPLORATION:
+# The mapping:
+#
+#       h_res = h_max * (1 - w_top)^erosion_power
+#
+# is a heuristic topology-to-entropy transfer profile used only to explore
+# sensitivity. It is NOT asserted as a universal CNVS law.
+#
+# DETERMINISTIC ASYMMETRIC TOPOLOGY:
+# A fixed rank-weighted topology is constructed without random sampling:
+#
+#       raw_weight_j = 1 / rank_j^topology_skew_exponent
+#
+# and normalized to sum to one.
+#
+# For each number r of colluding verifier slots, the program computes exactly:
+#
+#   1. MINIMUM EXPOSURE:
+#      sum of the r smallest topological weights;
+#
+#   2. EXACT MEAN EXPOSURE:
+#      r / Q_v, which is the exact expected captured weight over all uniformly
+#      selected r-subsets, regardless of the fixed weight asymmetry;
+#
+#   3. MAXIMUM ADVERSARIAL EXPOSURE:
+#      sum of the r largest topological weights.
+#
+# These are deterministic exposure scenarios. No random coalition or Dirichlet
+# topology is sampled.
+#
+# FEASIBILITY LIMIT:
+# ASSUMED_MAX_CRITICAL_FRAGMENTS is an implementation-level design assumption,
+# not a constant derived from CNVS theory.
+#
+# q = 1 CONTROL:
+# At total collusion, p_comp = 1 and no finite m can satisfy eta < 1.
+# The program records m_min = infinity and never discards infinite results.
 # ==============================================================================
+
+
+def validate_probability_open(name, value):
+    """Validate a finite probability strictly between zero and one."""
+    value = float(value)
+    if not math.isfinite(value) or not (0.0 < value < 1.0):
+        raise ValueError(f"{name} must satisfy 0 < {name} < 1.")
+    return value
+
+
+def validate_non_negative_real(name, value):
+    """Validate a finite non-negative real number."""
+    value = float(value)
+    if not math.isfinite(value) or value < 0.0:
+        raise ValueError(f"{name} must be a finite non-negative real number.")
+    return value
+
+
+def validate_positive_integer(name, value):
+    """Validate a positive integer."""
+    if not isinstance(value, (int, np.integer)) or value <= 0:
+        raise ValueError(f"{name} must be a positive integer.")
+    return int(value)
+
 
 def min_entropy_to_inference_bound(h_residual):
     """
-    Converts residual conditional min-entropy into an inference probability bound.
+    Convert residual conditional min-entropy into the corresponding inference
+    upper bound.
+
+    This deterministic exploration deliberately saturates the formal limit:
+        p_inf = 2^(-h_residual).
     """
-    h_residual = max(float(h_residual), 0.0)
+    h_residual = validate_non_negative_real("h_residual", h_residual)
     return 2.0 ** (-h_residual)
+
 
 def m_min_for_security(p_comp, eta):
     """
-    Computes the minimum critical-fragment cardinality required by Eq. 42.
+    Compute the minimum positive integer m satisfying:
+        p_comp^m <= eta.
+
+    Boundary cases:
+      - p_comp = 1  -> no finite m exists, return infinity;
+      - p_comp = 0  -> m = 1 is sufficient.
     """
-    if not (0.0 < eta < 1.0):
-        raise ValueError("eta must satisfy 0 < eta < 1.")
-    if p_comp >= 1.0:
+    eta = validate_probability_open("eta", eta)
+    p_comp = float(p_comp)
+
+    if not math.isfinite(p_comp) or not (0.0 <= p_comp <= 1.0):
+        raise ValueError("p_comp must satisfy 0 <= p_comp <= 1.")
+
+    if p_comp == 1.0:
         return math.inf
-    if p_comp <= 0.0:
+
+    if p_comp == 0.0:
         return 1
 
-    return math.ceil(math.log(eta) / math.log(p_comp))
+    log_eta = math.log(eta)
+    log_p_comp = math.log(p_comp)
 
-def dynamic_residual_entropy_from_topology(h_max, w_top, erosion_power=2.0):
+    return int(math.ceil(log_eta / log_p_comp))
+
+
+def verify_m_min_minimality(p_comp, eta, m_required):
     """
-    Heuristic dynamic erosion profile based on asymmetric topological exposure.
-    w_top represents the fraction of observable topological exposure acquired.
+    Verify the implementation of Equation 42 in logarithmic space.
+
+    For finite m_required, this checks:
+        p_comp^m_required <= eta
+    and, when m_required > 1:
+        p_comp^(m_required - 1) > eta.
+
+    This validates the numerical implementation of the design formula. It does
+    not independently validate the CNVS theorem from which the formula follows.
     """
-    w_top = min(max(float(w_top), 0.0), 1.0)
+    eta = validate_probability_open("eta", eta)
+    p_comp = float(p_comp)
+
+    if math.isinf(m_required):
+        if p_comp != 1.0:
+            raise RuntimeError(
+                "Infinite m_min is only expected when p_comp equals one."
+            )
+        return True
+
+    if p_comp == 0.0:
+        if m_required != 1:
+            raise RuntimeError("p_comp=0 must produce m_min=1.")
+        return True
+
+    log_eta = math.log(eta)
+    log_p_comp = math.log(p_comp)
+
+    log_bound_at_m = m_required * log_p_comp
+
+    # Small numerical tolerance in logarithmic space.
+    tolerance = 1e-12
+
+    if log_bound_at_m > log_eta + tolerance:
+        raise RuntimeError(
+            "Computed m_min does not satisfy the target eta."
+        )
+
+    if m_required > 1:
+        log_bound_at_previous_m = (m_required - 1) * log_p_comp
+
+        if log_bound_at_previous_m <= log_eta + tolerance:
+            raise RuntimeError(
+                "Computed m_min is not minimal; m_min - 1 also satisfies eta."
+            )
+
+    return True
+
+
+def residual_entropy_from_topological_exposure(
+    h_max,
+    w_top,
+    erosion_power
+):
+    """
+    Apply the heuristic deterministic topology-to-entropy transfer profile:
+        h_res = h_max * (1 - w_top)^erosion_power.
+    """
+    h_max = validate_non_negative_real("h_max", h_max)
+    erosion_power = validate_non_negative_real(
+        "erosion_power",
+        erosion_power
+    )
+
+    w_top = float(w_top)
+    if not math.isfinite(w_top) or not (0.0 <= w_top <= 1.0):
+        raise ValueError("w_top must satisfy 0 <= w_top <= 1.")
+
     return h_max * ((1.0 - w_top) ** erosion_power)
 
-def simulate_m_min_projection(seed=42):
+
+def construct_rank_weighted_topology(
+    topology_components,
+    topology_skew_exponent
+):
+    """
+    Construct a fixed deterministic asymmetric topology.
+
+    The weight of rank j is proportional to:
+        1 / j^topology_skew_exponent.
+
+    exponent = 0 produces a uniform topology.
+    larger exponents produce stronger concentration.
+    """
+    topology_components = validate_positive_integer(
+        "topology_components",
+        topology_components
+    )
+    topology_skew_exponent = validate_non_negative_real(
+        "topology_skew_exponent",
+        topology_skew_exponent
+    )
+
+    ranks = np.arange(
+        1,
+        topology_components + 1,
+        dtype=float
+    )
+
+    raw_weights = 1.0 / np.power(
+        ranks,
+        topology_skew_exponent
+    )
+
+    topology_weights = raw_weights / np.sum(raw_weights)
+
+    if not np.isclose(np.sum(topology_weights), 1.0):
+        raise RuntimeError("Topology weights do not sum to one.")
+
+    if np.any(topology_weights <= 0.0):
+        raise RuntimeError("All topology weights must be strictly positive.")
+
+    return topology_weights
+
+
+def deterministic_exposure_bounds(topology_weights, corrupted_slots):
+    """
+    Compute exact deterministic exposure values for a fixed topology.
+
+    Returns:
+      minimum_exposure:
+          sum of the corrupted_slots smallest weights;
+
+      exact_mean_exposure:
+          corrupted_slots / Q_v, equal to the exact expected captured weight
+          over all uniformly selected subsets of that cardinality;
+
+      maximum_exposure:
+          sum of the corrupted_slots largest weights.
+    """
+    topology_weights = np.asarray(topology_weights, dtype=float)
+
+    if topology_weights.ndim != 1 or topology_weights.size == 0:
+        raise ValueError(
+            "topology_weights must be a non-empty one-dimensional array."
+        )
+
+    if np.any(~np.isfinite(topology_weights)):
+        raise ValueError("topology_weights must be finite.")
+
+    if np.any(topology_weights < 0.0):
+        raise ValueError("topology_weights must be non-negative.")
+
+    if not np.isclose(np.sum(topology_weights), 1.0):
+        raise ValueError("topology_weights must sum to one.")
+
+    Q_verifiers = topology_weights.size
+
+    if (
+        not isinstance(corrupted_slots, (int, np.integer))
+        or not (0 <= corrupted_slots <= Q_verifiers)
+    ):
+        raise ValueError(
+            "corrupted_slots must satisfy 0 <= corrupted_slots <= Q_verifiers."
+        )
+
+    if corrupted_slots == 0:
+        return 0.0, 0.0, 0.0
+
+    if corrupted_slots == Q_verifiers:
+        return 1.0, 1.0, 1.0
+
+    sorted_weights = np.sort(topology_weights)
+
+    minimum_exposure = float(
+        np.sum(sorted_weights[:corrupted_slots])
+    )
+
+    maximum_exposure = float(
+        np.sum(sorted_weights[-corrupted_slots:])
+    )
+
+    exact_mean_exposure = corrupted_slots / Q_verifiers
+
+    if not (
+        minimum_exposure
+        <= exact_mean_exposure + 1e-12
+        <= maximum_exposure + 1e-12
+    ):
+        raise RuntimeError(
+            "Deterministic exposure ordering is inconsistent."
+        )
+
+    return (
+        minimum_exposure,
+        exact_mean_exposure,
+        maximum_exposure
+    )
+
+
+def design_point(
+    q_direct,
+    w_top,
+    h_max,
+    erosion_power,
+    eta
+):
+    """
+    Deterministically propagate one exposure assumption through the complete
+    design chain:
+        w_top -> h_res -> p_inf -> p_comp -> m_min.
+    """
+    q_direct = float(q_direct)
+
+    if not math.isfinite(q_direct) or not (0.0 <= q_direct <= 1.0):
+        raise ValueError("q_direct must satisfy 0 <= q_direct <= 1.")
+
+    h_res = residual_entropy_from_topological_exposure(
+        h_max=h_max,
+        w_top=w_top,
+        erosion_power=erosion_power
+    )
+
+    p_inf = min_entropy_to_inference_bound(h_res)
+
+    p_comp = q_direct + (1.0 - q_direct) * p_inf
+
+    # Guard only against floating-point overshoot.
+    p_comp = min(max(p_comp, 0.0), 1.0)
+
+    m_required = m_min_for_security(
+        p_comp=p_comp,
+        eta=eta
+    )
+
+    verify_m_min_minimality(
+        p_comp=p_comp,
+        eta=eta,
+        m_required=m_required
+    )
+
+    return {
+        "w_top": w_top,
+        "h_res": h_res,
+        "p_inf": p_inf,
+        "p_comp": p_comp,
+        "m_min": m_required,
+    }
+
+
+def maximum_feasible_q(q_values, m_values, feasibility_limit):
+    """
+    Return the largest q whose deterministic m_min is finite and does not exceed
+    the assumed implementation feasibility limit.
+    """
+    q_values = np.asarray(q_values, dtype=float)
+    m_values = np.asarray(m_values, dtype=float)
+
+    feasible = np.isfinite(m_values) & (
+        m_values <= feasibility_limit
+    )
+
+    if not np.any(feasible):
+        return math.nan
+
+    return float(np.max(q_values[feasible]))
+
+
+def plot_finite_curve_with_infinity_markers(
+    ax,
+    x_values,
+    y_values,
+    infinity_display_level,
+    label,
+    marker,
+    linestyle
+):
+    """
+    Plot finite m_min values and explicitly mark infinite values at a designated
+    display level. Infinite points are not silently removed or converted into a
+    finite design requirement.
+    """
+    x_values = np.asarray(x_values, dtype=float)
+    y_values = np.asarray(y_values, dtype=float)
+
+    finite_mask = np.isfinite(y_values)
+    infinite_mask = ~finite_mask
+
+    ax.plot(
+        x_values[finite_mask],
+        y_values[finite_mask],
+        marker=marker,
+        markersize=3.0,
+        linewidth=2.0,
+        linestyle=linestyle,
+        label=label
+    )
+
+    if np.any(infinite_mask):
+        ax.scatter(
+            x_values[infinite_mask],
+            np.full(
+                np.sum(infinite_mask),
+                infinity_display_level
+            ),
+            marker="X",
+            s=70,
+            label=f"{label}: no finite $m$"
+        )
+
+
+def explore_m_min_design_space():
     # ==========================================================================
-    # SYSTEM PARAMETERS
+    # DESIGN PARAMETERS
     # ==========================================================================
+
     H_MAX = 10.0
     ETA = 1e-6
 
     Q_VERIFIERS = 200
     TOPOLOGY_COMPONENTS = Q_VERIFIERS
-    ITERATIONS = 50000
+
+    # Fixed deterministic topology concentration.
+    # This value is an exploratory design assumption, not a CNVS constant.
+    TOPOLOGY_SKEW_EXPONENT = 0.75
+
+    # Heuristic topology-to-entropy transfer exponent.
     EROSION_POWER = 2.0
-    M_MAX_SEMANTIC = 3000
 
-    q_axis = np.linspace(0.01, 0.99, 80)
-    rng = np.random.default_rng(seed)
+    # Assumed implementation-level feasibility boundary.
+    ASSUMED_MAX_CRITICAL_FRAGMENTS = 3_000
 
-    # Fixed asymmetric topology via Dirichlet distribution
-    DIRICHLET_ALPHA = 1.0
-    topology_weights = rng.dirichlet(np.ones(TOPOLOGY_COMPONENTS) * DIRICHLET_ALPHA)
+    # Deterministic sweep over exact verifier-slot counts.
+    # Includes q = 1 as the total-collusion control.
+    selected_r_values = np.unique(
+        np.concatenate([
+            np.rint(
+                np.linspace(
+                    1,
+                    Q_VERIFIERS - 1,
+                    80
+                )
+            ).astype(int),
+            np.array([Q_VERIFIERS], dtype=int)
+        ])
+    )
 
-    q_effective_values = []
-    m_min_mean = []
-    m_min_median = []
-    m_min_95th = []
-    m_min_worst_sampled = []
-    p_comp_mean = []
-    h_res_mean = []
-    w_top_mean = []
+    # ==========================================================================
+    # VALIDATION AND TOPOLOGY CONSTRUCTION
+    # ==========================================================================
 
-    print("Executing CNVS Statistical Projection: Systemic Design Formula (m_min)...")
-    print(f"Target security eta: {ETA:.1e}")
-    print(f"Initial residual min-entropy h_max: {H_MAX}")
-    print(f"Verifier pool Q_v: {Q_VERIFIERS}")
-    print(f"Semantic feasibility boundary m_max: {M_MAX_SEMANTIC}")
-    print(f"q range projected: 0.01 to 0.99\n")
+    validate_non_negative_real("H_MAX", H_MAX)
+    validate_probability_open("ETA", ETA)
+    validate_positive_integer("Q_VERIFIERS", Q_VERIFIERS)
+    validate_positive_integer(
+        "TOPOLOGY_COMPONENTS",
+        TOPOLOGY_COMPONENTS
+    )
+    validate_non_negative_real(
+        "TOPOLOGY_SKEW_EXPONENT",
+        TOPOLOGY_SKEW_EXPONENT
+    )
+    validate_non_negative_real(
+        "EROSION_POWER",
+        EROSION_POWER
+    )
+    validate_positive_integer(
+        "ASSUMED_MAX_CRITICAL_FRAGMENTS",
+        ASSUMED_MAX_CRITICAL_FRAGMENTS
+    )
 
-    for q_target in q_axis:
-        corrupted_slots = int(round(q_target * Q_VERIFIERS))
-        corrupted_slots = min(max(corrupted_slots, 1), Q_VERIFIERS - 1)
-        q_direct = corrupted_slots / Q_VERIFIERS
-
-        m_samples, p_comp_samples, h_res_samples, w_top_samples = [], [], [], []
-
-        for _ in range(ITERATIONS):
-            # 1. Asymmetric topological exposure
-            captured_components = rng.choice(
-                TOPOLOGY_COMPONENTS, size=corrupted_slots, replace=False
-            )
-            w_top = float(np.sum(topology_weights[captured_components]))
-
-            # 2. Dynamic residual min-entropy erosion
-            h_res = dynamic_residual_entropy_from_topology(
-                h_max=H_MAX, w_top=w_top, erosion_power=EROSION_POWER
-            )
-            p_inf = min_entropy_to_inference_bound(h_res)
-
-            # 3. Composite compromise probability
-            p_comp = q_direct + (1.0 - q_direct) * p_inf
-
-            # 4. Minimum critical fragmentation (Eq. 42)
-            m_required = m_min_for_security(p_comp, ETA)
-
-            m_samples.append(m_required)
-            p_comp_samples.append(p_comp)
-            h_res_samples.append(h_res)
-            w_top_samples.append(w_top)
-
-        m_array = np.array(m_samples, dtype=float)
-        finite_m = m_array[np.isfinite(m_array)]
-
-        if finite_m.size == 0:
-            mean_m = median_m = p95_m = worst_m = math.inf
-        else:
-            mean_m = float(np.mean(finite_m))
-            median_m = float(np.median(finite_m))
-            p95_m = float(np.percentile(finite_m, 95))
-            worst_m = float(np.max(finite_m))
-
-        q_effective_values.append(q_direct)
-        m_min_mean.append(mean_m)
-        m_min_median.append(median_m)
-        m_min_95th.append(p95_m)
-        m_min_worst_sampled.append(worst_m)
-        p_comp_mean.append(float(np.mean(p_comp_samples)))
-        h_res_mean.append(float(np.mean(h_res_samples)))
-        w_top_mean.append(float(np.mean(w_top_samples)))
-
-        print(
-            f"q={q_direct:5.2f} | E[W_top]={w_top_mean[-1]:7.4f} | "
-            f"E[h_res]={h_res_mean[-1]:8.4f} | E[p_comp]={p_comp_mean[-1]:10.7f} | "
-            f"E[m_min]={mean_m:8.2f} | m_min(95%)={p95_m:8.2f}"
+    if TOPOLOGY_COMPONENTS != Q_VERIFIERS:
+        raise ValueError(
+            "This exploration requires one topology component per verifier slot."
         )
 
-    q_effective_values = np.array(q_effective_values, dtype=float)
-    m_min_mean = np.array(m_min_mean, dtype=float)
-    m_min_95th = np.array(m_min_95th, dtype=float)
-    m_min_worst_sampled = np.array(m_min_worst_sampled, dtype=float)
+    topology_weights = construct_rank_weighted_topology(
+        topology_components=TOPOLOGY_COMPONENTS,
+        topology_skew_exponent=TOPOLOGY_SKEW_EXPONENT
+    )
 
-    feasible_95 = m_min_95th <= M_MAX_SEMANTIC
+    sorted_descending = np.sort(topology_weights)[::-1]
 
-    if np.any(feasible_95):
-        max_q_feasible_95 = float(np.max(q_effective_values[feasible_95]))
-        print(f"\n95% design criterion: feasible up to approximately q = {max_q_feasible_95:.2f}")
-    else:
-        print("\n95% design criterion: no q value is feasible under current parameters.")
+    topology_hhi = float(np.sum(topology_weights ** 2))
+    top_10_share = float(
+        np.sum(
+            sorted_descending[
+                :max(1, int(round(0.10 * TOPOLOGY_COMPONENTS)))
+            ]
+        )
+    )
+
+    # ==========================================================================
+    # DETERMINISTIC EXPLORATION
+    # ==========================================================================
+
+    q_values = []
+
+    exposures = {
+        "minimum": [],
+        "mean": [],
+        "maximum": [],
+    }
+
+    results = {
+        "minimum": {
+            "h_res": [],
+            "p_inf": [],
+            "p_comp": [],
+            "m_min": [],
+        },
+        "mean": {
+            "h_res": [],
+            "p_inf": [],
+            "p_comp": [],
+            "m_min": [],
+        },
+        "maximum": {
+            "h_res": [],
+            "p_inf": [],
+            "p_comp": [],
+            "m_min": [],
+        },
+    }
+
+    print(
+        "CNVS Test 5: Deterministic Exploratory Test of the "
+        "Minimum Critical Fragmentation Design Formula"
+    )
+    print(f"Target reconstruction-risk limit eta: {ETA:.1e}")
+    print(f"Initial residual min-entropy h_max: {H_MAX:.3f}")
+    print(f"Verifier/topology components Q_v: {Q_VERIFIERS}")
+    print(
+        "Fixed topology skew exponent: "
+        f"{TOPOLOGY_SKEW_EXPONENT:.3f}"
+    )
+    print(f"Topology concentration HHI: {topology_hhi:.6f}")
+    print(f"Top 10% topology-weight share: {top_10_share:.4%}")
+    print(
+        "Heuristic topology-to-entropy erosion power: "
+        f"{EROSION_POWER:.3f}"
+    )
+    print(
+        "Assumed implementation feasibility limit: "
+        f"{ASSUMED_MAX_CRITICAL_FRAGMENTS:,} critical fragments"
+    )
+    print(
+        "No Monte Carlo sampling is performed. All exposure values are "
+        "deterministic and exact for the fixed topology.\n"
+    )
+
+    for corrupted_slots in selected_r_values:
+        q_direct = corrupted_slots / Q_VERIFIERS
+
+        (
+            minimum_exposure,
+            exact_mean_exposure,
+            maximum_exposure
+        ) = deterministic_exposure_bounds(
+            topology_weights=topology_weights,
+            corrupted_slots=int(corrupted_slots)
+        )
+
+        scenario_exposures = {
+            "minimum": minimum_exposure,
+            "mean": exact_mean_exposure,
+            "maximum": maximum_exposure,
+        }
+
+        q_values.append(q_direct)
+
+        for scenario_name, w_top in scenario_exposures.items():
+            point = design_point(
+                q_direct=q_direct,
+                w_top=w_top,
+                h_max=H_MAX,
+                erosion_power=EROSION_POWER,
+                eta=ETA
+            )
+
+            exposures[scenario_name].append(point["w_top"])
+            results[scenario_name]["h_res"].append(point["h_res"])
+            results[scenario_name]["p_inf"].append(point["p_inf"])
+            results[scenario_name]["p_comp"].append(point["p_comp"])
+            results[scenario_name]["m_min"].append(point["m_min"])
+
+        def format_m(value):
+            return "infinity" if math.isinf(value) else f"{int(value):,}"
+
+        print(
+            f"q={q_direct:5.3f} | "
+            f"W_min={minimum_exposure:8.5f} | "
+            f"W_mean={exact_mean_exposure:8.5f} | "
+            f"W_max={maximum_exposure:8.5f} | "
+            f"m_min(min/mean/max)="
+            f"{format_m(results['minimum']['m_min'][-1])} / "
+            f"{format_m(results['mean']['m_min'][-1])} / "
+            f"{format_m(results['maximum']['m_min'][-1])}"
+        )
+
+    q_values = np.asarray(q_values, dtype=float)
+
+    for scenario_name in results:
+        for variable_name in results[scenario_name]:
+            results[scenario_name][variable_name] = np.asarray(
+                results[scenario_name][variable_name],
+                dtype=float
+            )
+
+        exposures[scenario_name] = np.asarray(
+            exposures[scenario_name],
+            dtype=float
+        )
+
+    # ==========================================================================
+    # FEASIBILITY SUMMARY
+    # ==========================================================================
+
+    feasibility_labels = {
+        "minimum": "Minimum-exposure coalition",
+        "mean": "Exact mean exposure",
+        "maximum": "Maximum adversarial exposure",
+    }
+
+    print("\nDeterministic feasibility summary:")
+
+    for scenario_name in ["minimum", "mean", "maximum"]:
+        max_q = maximum_feasible_q(
+            q_values=q_values,
+            m_values=results[scenario_name]["m_min"],
+            feasibility_limit=ASSUMED_MAX_CRITICAL_FRAGMENTS
+        )
+
+        if math.isnan(max_q):
+            print(
+                f"  {feasibility_labels[scenario_name]}: "
+                "no explored q value is feasible."
+            )
+        else:
+            print(
+                f"  {feasibility_labels[scenario_name]}: "
+                f"feasible up to q={max_q:.3f} on the explored grid."
+            )
+
+    total_collusion_index = np.where(
+        np.isclose(q_values, 1.0)
+    )[0]
+
+    if total_collusion_index.size != 1:
+        raise RuntimeError(
+            "The deterministic q=1 control must occur exactly once."
+        )
+
+    total_collusion_index = int(total_collusion_index[0])
+
+    for scenario_name in results:
+        if not math.isinf(
+            results[scenario_name]["m_min"][total_collusion_index]
+        ):
+            raise RuntimeError(
+                "q=1 must produce an infinite m_min in every scenario."
+            )
+
+    print(
+        "\nTotal-collusion control q=1: "
+        "p_comp=1 and no finite critical fragmentation can satisfy eta."
+    )
 
     # ==========================================================================
     # PLOTTING
     # ==========================================================================
-    fig, ax = plt.subplots(figsize=(13, 7))
 
-    finite_values = np.concatenate([
-        m_min_mean[np.isfinite(m_min_mean)],
-        m_min_95th[np.isfinite(m_min_95th)],
-        m_min_worst_sampled[np.isfinite(m_min_worst_sampled)]
+    fig, (ax1, ax2) = plt.subplots(
+        2,
+        1,
+        figsize=(13, 12),
+        sharex=True
+    )
+
+    # Plot 1: Deterministic topological exposure scenarios.
+    ax1.plot(
+        q_values,
+        exposures["minimum"],
+        marker="o",
+        markersize=3.0,
+        linewidth=2.0,
+        label="Minimum possible exposure"
+    )
+
+    ax1.plot(
+        q_values,
+        exposures["mean"],
+        marker="s",
+        markersize=3.0,
+        linewidth=2.0,
+        linestyle="--",
+        label="Exact mean exposure over all equal-cardinality subsets"
+    )
+
+    ax1.plot(
+        q_values,
+        exposures["maximum"],
+        marker="^",
+        markersize=3.0,
+        linewidth=2.0,
+        linestyle=":",
+        label="Maximum adversarial exposure"
+    )
+
+    ax1.set_title(
+        "1. Exact Deterministic Exposure Bounds on the Fixed Asymmetric Topology",
+        fontsize=13,
+        fontweight="bold"
+    )
+    ax1.set_ylabel(r"Captured topology-weight fraction $w_{\mathrm{top}}$")
+    ax1.set_ylim(0.0, 1.03)
+    ax1.grid(True, linestyle="--", linewidth=0.5, alpha=0.65)
+    ax1.legend(loc="upper left", fontsize=9)
+
+    # Plot 2: Deterministic m_min design requirements.
+    all_finite_m = np.concatenate([
+        results[name]["m_min"][
+            np.isfinite(results[name]["m_min"])
+        ]
+        for name in results
     ])
 
-    Y_AXIS_MIN = 1
-    Y_AXIS_MAX = max(3500, float(np.percentile(finite_values, 99)) * 1.15)
+    if all_finite_m.size == 0:
+        raise RuntimeError("No finite m_min values are available for plotting.")
 
-    ax.plot(
-        q_effective_values, m_min_mean,
-        marker="o", markersize=2.6, markeredgewidth=0.4, linewidth=2.2,
-        label=r"Expected $\mathbb{E}[m_{min}]$"
+    maximum_finite_m = float(np.max(all_finite_m))
+
+    infinity_display_level = max(
+        maximum_finite_m * 1.35,
+        ASSUMED_MAX_CRITICAL_FRAGMENTS * 2.0
     )
 
-    ax.plot(
-        q_effective_values, m_min_95th,
-        marker="s", markersize=2.6, markeredgewidth=0.4, linestyle="--", linewidth=2.2,
-        label=r"Risk-margin design $m_{min}^{95\%}$"
+    plot_finite_curve_with_infinity_markers(
+        ax=ax2,
+        x_values=q_values,
+        y_values=results["minimum"]["m_min"],
+        infinity_display_level=infinity_display_level,
+        label="Minimum-exposure requirement",
+        marker="o",
+        linestyle="-"
     )
 
-    ax.plot(
-        q_effective_values, m_min_worst_sampled,
-        marker="^", markersize=2.6, markeredgewidth=0.4, linestyle=":", linewidth=1.8,
-        label=r"Worst sampled $m_{min}$"
+    plot_finite_curve_with_infinity_markers(
+        ax=ax2,
+        x_values=q_values,
+        y_values=results["mean"]["m_min"],
+        infinity_display_level=infinity_display_level,
+        label="Exact-mean-exposure requirement",
+        marker="s",
+        linestyle="--"
     )
 
-    ax.axhline(
-        M_MAX_SEMANTIC,
-        linestyle="-.", linewidth=2.3,
-        label=rf"Semantic feasibility limit $m_{{max}}={M_MAX_SEMANTIC}$"
+    plot_finite_curve_with_infinity_markers(
+        ax=ax2,
+        x_values=q_values,
+        y_values=results["maximum"]["m_min"],
+        infinity_display_level=infinity_display_level,
+        label="Maximum-adversarial-exposure requirement",
+        marker="^",
+        linestyle=":"
     )
 
-    reference_fragment_levels = [50, 150, 250, 350, 450]
-    for level in reference_fragment_levels:
-        ax.axhline(level, linestyle="--", linewidth=1.35, alpha=0.65)
-        ax.text(
-            1.006, level, f"{level} fragments",
-            transform=ax.get_yaxis_transform(), va="center", ha="left",
-            fontsize=8.5, fontweight="bold", alpha=0.9, clip_on=False
+    ax2.axhline(
+        ASSUMED_MAX_CRITICAL_FRAGMENTS,
+        linestyle="-.",
+        linewidth=2.0,
+        label=(
+            "Assumed implementation feasibility limit "
+            f"({ASSUMED_MAX_CRITICAL_FRAGMENTS:,})"
         )
-
-    ax.fill_between(
-        q_effective_values, Y_AXIS_MIN, M_MAX_SEMANTIC,
-        where=feasible_95, alpha=0.12, label=r"Feasible under 95% criterion"
     )
 
-    ax.fill_between(
-        q_effective_values, M_MAX_SEMANTIC, Y_AXIS_MAX,
-        where=~feasible_95, alpha=0.12, label=r"Infeasible under 95% criterion"
+    ax2.set_yscale("log")
+    ax2.set_xlim(float(np.min(q_values)), 1.0)
+    ax2.set_ylim(1.0, infinity_display_level * 1.15)
+
+    ax2.set_title(
+        "2. Deterministic Minimum Critical-Fragment Requirements",
+        fontsize=13,
+        fontweight="bold"
     )
 
-    ax.set_yscale("log")
-    ax.set_xlim(0.01, 0.99)
-    ax.set_ylim(Y_AXIS_MIN, Y_AXIS_MAX)
+    ax2.set_xlabel(r"Fraction of colluding verifier slots ($q=r/Q_v$)")
+    ax2.set_ylabel(r"Required critical fragments $m_{\min}$")
+    ax2.grid(
+        True,
+        which="both",
+        linestyle="--",
+        linewidth=0.5,
+        alpha=0.65
+    )
+    ax2.legend(loc="upper left", fontsize=8.5)
 
-    ax.set_title(
-        "CNVS Systemic Design Formula: Minimum Critical Fragmentation\n"
-        rf"Target $\eta={ETA:.0e}$, asymmetric topological exposure, "
-        rf"$h_{{max}}={H_MAX}$, curve shown up to $q=0.99$",
-        pad=15
+    ax2.yaxis.set_major_formatter(
+        mticker.FuncFormatter(
+            lambda value, _: f"{value:,.0f}"
+            if value >= 1.0
+            else f"{value:g}"
+        )
     )
 
-    ax.set_xlabel(r"Fraction of colluding verifiers ($q=r/Q_v$)")
-    ax.set_ylabel(r"Minimum critical fragments required ($m_{min}$)")
+    fig.suptitle(
+        "CNVS Test 5 — Deterministic Exploratory Test of Equation 42\n"
+        rf"$\eta={ETA:.0e}$, $h_{{max}}={H_MAX}$, "
+        rf"fixed topology skew exponent={TOPOLOGY_SKEW_EXPONENT}",
+        fontsize=15,
+        fontweight="bold"
+    )
 
-    ax.grid(True, which="both", linestyle="--", linewidth=0.5, alpha=0.65)
-    ax.legend(loc="upper left", fontsize=10)
+    fig.text(
+        0.5,
+        0.012,
+        "The topology-to-entropy mapping and feasibility limit are exploratory "
+        "design assumptions. Infinite markers mean that no finite m can satisfy "
+        "the selected eta; they are not omitted from the analysis.",
+        ha="center",
+        fontsize=9
+    )
 
-    plt.tight_layout()
+    plt.tight_layout(rect=(0.0, 0.04, 1.0, 0.95))
     plt.show()
 
+
 if __name__ == "__main__":
-    simulate_m_min_projection()
+    explore_m_min_design_space()
