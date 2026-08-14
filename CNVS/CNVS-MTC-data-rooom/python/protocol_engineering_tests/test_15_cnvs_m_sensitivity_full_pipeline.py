@@ -14,7 +14,7 @@
 
 # ==============================================================================
 # Test name:  CNVS Test 15: Full Test-14 Replication with Critical-Cardinality Sensitivity
-# filename:  "test_15_cnvs_m_sensitivity_full_pipeline_definitive.py"
+# filename:  "test_15_cnvs_m_sensitivity_full_pipeline.py"
 #
 # This file is part of the CNVS MTC Data Room.
 # ==============================================================================
