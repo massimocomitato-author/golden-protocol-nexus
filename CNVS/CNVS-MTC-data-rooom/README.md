@@ -53,12 +53,15 @@ cnvs-mtc-data-room/
 ├── python/empirical_tests/
 │   ├── test_09_structural_poc.py
 │   ├── test_10_full_structural_semantic_model.py
-│   └── test_11_fragmentation_sensitivity.py
+│   ├── test_11_fragmentation_sensitivity.py
+│   └── test_12_entropy_calibrated_topology_invariant_leakage.py
 │
 ├── python/protocol_engineering_tests/
-│   ├── test_12_engineering_hardened_256bit_fragmentation.py
-│   ├── test_13_engineering_hardened_256bit_full_strs.py
-│
+│   ├── test_13_engineering_hardened_256bit_fragmentation.py
+│   ├── test_14_semantic_end_to_end_cnvs_full_pipeline.py
+│   └── test_15_cnvs_m_sensitivity_full_pipeline.py
+│   
+│   
 ├── html-js/interactive_tests/
 │   ├── test_06_expected_value_dashboard.html
 │   ├── test_07_reconstruction_decay_dashboard.html
