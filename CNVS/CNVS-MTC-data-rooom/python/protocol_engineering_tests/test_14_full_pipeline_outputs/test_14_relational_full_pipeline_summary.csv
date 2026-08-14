@@ -1,0 +1,6 @@
+attack_type,iterations,seed_replicates,local_pass_rate,cons_r_detection_rate,vg_bypass_rate,ci95_detection_low,ci95_detection_high,object_audits,object_detection_rate,object_vector_agreement_rate
+blind_parent_guess,100000,10,1.0,0.99766,0.00234,0.9973408136790408,0.997940952981743,1000,0.998,1.0
+blind_role_guess,100000,10,1.0,0.9989,0.0011,0.9986744980756754,0.9990871733205893,1000,0.999,1.0
+blind_verifier_guess,100000,10,1.0,0.99902,0.00098,0.9988059582953221,0.9991957038817956,1000,1.0,1.0
+stale_task_digest,100000,10,1.0,1.0,0.0,0.999961586887417,1.0,1000,1.0,1.0
+assignment_collision,100000,10,1.0,1.0,0.0,0.999961586887417,1.0,1000,1.0,1.0

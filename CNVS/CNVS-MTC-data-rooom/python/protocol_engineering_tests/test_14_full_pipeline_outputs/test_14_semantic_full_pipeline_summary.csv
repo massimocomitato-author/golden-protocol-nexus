@@ -1,0 +1,2 @@
+equation_name,attached_node,iterations,seed_replicates,local_pass_rate,cons_pass_rate,inv_c_veto_rate,vg_accept_rate,seed_mean_veto_rate,seed_std_veto_rate,ci95_veto_low,ci95_veto_high,object_audits,object_veto_rate,object_vector_agreement_rate
+kitchen_area,node_03795afe5e132d763351308d,500000,10,1.0,1.0,1.0,0.0,1.0,0.0,0.9999923171413853,0.9999999999999999,1000,1.0,1.0
