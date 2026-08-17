@@ -87,7 +87,7 @@ CURRENT
 
 | File | Folder | Status | Notes |
 |---|---|---|---|
-| `Report_Monte_Carlo_ENG.pdf` | `reports/` | Current | Final MTC Technical Report |
+| `Report_Monte_Carlo_ENG.pdf` | `reports/` | Current | Final MTC Technical Report (Tests 1-12) |
 | `ing_mtc_report_eng_v2.pdf` | `reports/` | Current | Engineering-Hardened Execution Report (Tests 13-15) |
 
 ---
