@@ -1,0 +1,85 @@
+import Mathlib
+
+open Filter
+open scoped Topology
+
+namespace CNVSEmergentSecurityScaling
+
+/--
+Modello astratto di scaling emergente.
+
+`PRec n` = probabilità di ricostruzione non autorizzata alla scala n.
+`Bound n` = upper bound teorico, per esempio Chernoff o pcomp^m.
+-/
+structure ScalingModel where
+  PRec : ℕ → ℝ
+  Bound : ℕ → ℝ
+
+  hPRec_nonneg : ∀ n, 0 ≤ PRec n
+  hBound_nonneg : ∀ n, 0 ≤ Bound n
+
+  hBoundControlsPRec :
+    ∀ n, PRec n ≤ Bound n
+
+  hBoundTendsToZero :
+    Tendsto Bound atTop (𝓝 0)
+
+/--
+Teorema di scaling emergente:
+
+se la probabilità di ricostruzione è sempre dominata da un bound
+che tende a zero, allora anche la probabilità di ricostruzione tende a zero.
+-/
+theorem emergent_security_scaling
+    (M : ScalingModel) :
+    Tendsto M.PRec atTop (𝓝 0) := by
+  apply squeeze_zero
+  · exact M.hPRec_nonneg
+  · exact M.hBoundControlsPRec
+  · exact M.hBoundTendsToZero
+
+/--
+Esempio concreto:
+PRec(n) = 1 / (n + 1)
+Bound(n) = 1 / (n + 1)
+
+Allora PRec(n) → 0.
+-/
+noncomputable def ExampleScalingModel : ScalingModel where
+  PRec := fun n => 1 / ((n : ℝ) + 1)
+  Bound := fun n => 1 / ((n : ℝ) + 1)
+
+  hPRec_nonneg := by
+    intro n
+    positivity
+
+  hBound_nonneg := by
+    intro n
+    positivity
+
+  hBoundControlsPRec := by
+    intro n
+    rfl
+
+  hBoundTendsToZero := by
+    have h :
+        Tendsto (fun n : ℕ => ((n : ℝ) + 1)) atTop atTop := by
+      have hn :
+          Tendsto (fun n : ℕ => (n : ℝ)) atTop atTop := by
+        exact tendsto_natCast_atTop_atTop
+      exact tendsto_atTop_add_const_right atTop 1 hn
+
+    have hinv :
+        Tendsto
+          (fun n : ℕ => (((n : ℝ) + 1)⁻¹))
+          atTop
+          (𝓝 0) := by
+      exact tendsto_inv_atTop_zero.comp h
+
+    simpa [one_div] using hinv
+
+example :
+    Tendsto ExampleScalingModel.PRec atTop (𝓝 0) := by
+  exact emergent_security_scaling ExampleScalingModel
+
+end CNVSEmergentSecurityScaling

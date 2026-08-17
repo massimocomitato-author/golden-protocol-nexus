@@ -1,0 +1,139 @@
+import Mathlib
+
+namespace CNVSInformationDensity
+
+/--
+Modello informativo CNVS.
+-/
+structure DensityModel where
+  IF : ℝ
+  IN : ℝ
+  IG : ℝ
+  alpha : ℝ
+  beta : ℝ
+
+  hIF_nonneg : 0 ≤ IF
+  hIN_pos : 0 < IN
+  hIG_pos : 0 < IG
+
+  halpha_nonneg : 0 ≤ alpha
+  hbeta_nonneg : 0 ≤ beta
+  hweights_sum : alpha + beta = 1
+
+/-- Densità nodale: informazione del frammento rispetto al nodo. -/
+noncomputable def rhoN (M : DensityModel) : ℝ :=
+  M.IF / M.IN
+
+/-- Densità globale: informazione del frammento rispetto al globale. -/
+noncomputable def rhoG (M : DensityModel) : ℝ :=
+  M.IF / M.IG
+
+/--
+Densità combinata pesata.
+
+Questa è una versione Lean-stabile della combinazione:
+ρ_C = α ρ_N + β ρ_G.
+-/
+noncomputable def rhoC (M : DensityModel) : ℝ :=
+  M.alpha * rhoN M + M.beta * rhoG M
+
+/--
+La densità nodale è non negativa.
+-/
+theorem rhoN_nonnegative (M : DensityModel) :
+    0 ≤ rhoN M := by
+  unfold rhoN
+  exact div_nonneg M.hIF_nonneg (le_of_lt M.hIN_pos)
+
+/--
+La densità globale è non negativa.
+-/
+theorem rhoG_nonnegative (M : DensityModel) :
+    0 ≤ rhoG M := by
+  unfold rhoG
+  exact div_nonneg M.hIF_nonneg (le_of_lt M.hIG_pos)
+
+/--
+La densità combinata è non negativa.
+-/
+theorem rhoC_nonnegative (M : DensityModel) :
+    0 ≤ rhoC M := by
+  unfold rhoC
+  exact add_nonneg
+    (mul_nonneg M.halpha_nonneg (rhoN_nonnegative M))
+    (mul_nonneg M.hbeta_nonneg (rhoG_nonnegative M))
+
+/--
+Se IF ≤ IN, allora ρ_N ≤ 1.
+-/
+theorem rhoN_le_one
+    (M : DensityModel)
+    (hIF_le_IN : M.IF ≤ M.IN) :
+    rhoN M ≤ 1 := by
+  unfold rhoN
+  exact div_le_one_of_le₀ hIF_le_IN (le_of_lt M.hIN_pos)
+
+/--
+Se IF ≤ IG, allora ρ_G ≤ 1.
+-/
+theorem rhoG_le_one
+    (M : DensityModel)
+    (hIF_le_IG : M.IF ≤ M.IG) :
+    rhoG M ≤ 1 := by
+  unfold rhoG
+  exact div_le_one_of_le₀ hIF_le_IG (le_of_lt M.hIG_pos)
+
+/--
+Se ρ_N ≤ 1 e ρ_G ≤ 1, allora anche ρ_C ≤ 1.
+-/
+theorem rhoC_le_one
+    (M : DensityModel)
+    (hN : rhoN M ≤ 1)
+    (hG : rhoG M ≤ 1) :
+    rhoC M ≤ 1 := by
+  unfold rhoC
+  calc
+    M.alpha * rhoN M + M.beta * rhoG M
+        ≤ M.alpha * 1 + M.beta * 1 := by
+          gcongr
+    _ = 1 := by
+          linarith [M.hweights_sum]
+
+/--
+Esempio concreto:
+IF = 20, IN = 100, IG = 1000, α = β = 1/2.
+-/
+def ExampleDensityModel : DensityModel where
+  IF := 20
+  IN := 100
+  IG := 1000
+  alpha := 1 / 2
+  beta := 1 / 2
+
+  hIF_nonneg := by norm_num
+  hIN_pos := by norm_num
+  hIG_pos := by norm_num
+
+  halpha_nonneg := by norm_num
+  hbeta_nonneg := by norm_num
+  hweights_sum := by norm_num
+
+example :
+    rhoN ExampleDensityModel = 1 / 5 := by
+  norm_num [rhoN, ExampleDensityModel]
+
+example :
+    rhoG ExampleDensityModel = 1 / 50 := by
+  norm_num [rhoG, ExampleDensityModel]
+
+example :
+    0 ≤ rhoC ExampleDensityModel := by
+  exact rhoC_nonnegative ExampleDensityModel
+
+example :
+    rhoC ExampleDensityModel ≤ 1 := by
+  apply rhoC_le_one
+  · exact rhoN_le_one ExampleDensityModel (by norm_num [ExampleDensityModel])
+  · exact rhoG_le_one ExampleDensityModel (by norm_num [ExampleDensityModel])
+
+end CNVSInformationDensity

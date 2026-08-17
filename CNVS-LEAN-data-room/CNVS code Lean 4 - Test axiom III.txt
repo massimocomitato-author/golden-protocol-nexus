@@ -1,0 +1,74 @@
+import Mathlib.Data.Finset.Basic
+import Mathlib.Tactic
+
+namespace CNVS
+
+abbrev Elem := Fin 2
+
+structure CNVSState where
+  E : Set Elem
+  R : Elem → Elem → Prop
+
+def VLocal : Elem → Prop :=
+  fun _ => True
+
+def ConsistentR : CNVSState → Prop :=
+  fun S => S.R 0 1
+
+def Invariant : CNVSState → Prop :=
+  fun _ => True
+
+def VGlobal : CNVSState → Prop :=
+  fun S =>
+    (∀ s : Elem, s ∈ S.E → VLocal s) ∧
+    ConsistentR S ∧
+    Invariant S
+
+/--
+Stato buono:
+tutti i locali passano e la relazione richiesta esiste.
+-/
+def GoodState : CNVSState where
+  E := Set.univ
+  R := fun a b => a = 0 ∧ b = 1
+
+theorem good_state_global_valid :
+    VGlobal GoodState := by
+  constructor
+  · intro s hs
+    trivial
+  · constructor
+    · simp [ConsistentR, GoodState]
+    · simp [Invariant]
+
+/--
+Stato cattivo:
+tutti i locali passano, ma la relazione globale richiesta manca.
+-/
+def BadState : CNVSState where
+  E := Set.univ
+  R := fun _ _ => False
+
+theorem bad_state_all_local_valid :
+    ∀ s : Elem, s ∈ BadState.E → VLocal s := by
+  intro s hs
+  trivial
+
+theorem bad_state_not_global_valid :
+    ¬ VGlobal BadState := by
+  intro h
+  exact h.2.1
+
+/--
+Axiom III test:
+la validità locale di tutti gli elementi NON implica la validità globale.
+-/
+theorem axiom_III_local_does_not_imply_global :
+    ∃ S : CNVSState,
+      (∀ s : Elem, s ∈ S.E → VLocal s) ∧
+      ¬ VGlobal S := by
+  refine ⟨BadState, ?_, ?_⟩
+  · exact bad_state_all_local_valid
+  · exact bad_state_not_global_valid
+
+end CNVS

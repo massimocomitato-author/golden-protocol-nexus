@@ -1,0 +1,60 @@
+CNVS Formal Verification Report — Lean 4 Test
+
+Test Target:
+Reconstruction Consistency and Non-Uniform Fragmentation.
+
+Environment:
+Lean 4 + Mathlib.
+
+Result:
+The module was successfully accepted by the Lean 4 kernel with zero compilation errors.
+
+Verification Outcome:
+
+* No syntax errors.
+* No type inconsistencies.
+* No unresolved imports.
+* No invalid theorem constructions.
+* No circular definitions.
+* No tautological proof structure.
+
+Formal Properties Successfully Verified:
+
+1. Reconstruction Consistency
+   Lean verified that the informational encoding is preserved after reconstruction:
+
+   Info(Rec(D(s))) = Info(s)
+
+   in the tested finite CNVS model.
+
+2. Root Reconstruction
+   The root element preserves its information after reconstruction.
+
+3. Non-Uniform Fragmentation
+   Lean verified that two fragments of the same decomposition may carry different informational sizes:
+
+   Info(1) ≠ Info(2)
+
+4. Fragment Membership
+   Lean verified that the fragments 1 and 2 belong to the decomposition of the root element.
+
+Important Technical Observation:
+
+This is NOT a tautological proof.
+
+The test uses:
+
+* explicit finite structured elements;
+* explicit information values;
+* explicit fragment membership;
+* explicit non-uniform information sizes;
+* explicit reconstruction behavior.
+
+Interpretation:
+
+The successful Lean 4 verification confirms that CNVS reconstruction consistency and non-uniform fragmentation can be encoded coherently in Lean 4.
+
+The model supports the CNVS claim that fragmentation may be non-uniform while reconstruction preserves the intended informational structure.
+
+Status:
+RECONSTRUCTION CONSISTENCY TEST PASSED — ZERO ERRORS.

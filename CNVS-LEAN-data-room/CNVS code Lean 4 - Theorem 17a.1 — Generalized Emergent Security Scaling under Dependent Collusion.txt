@@ -1,0 +1,110 @@
+import Mathlib.Probability.ConditionalProbability
+import Mathlib.Tactic
+
+open MeasureTheory
+open scoped ENNReal ProbabilityTheory
+
+namespace CNVS
+
+variable {Ω : Type*} [MeasurableSpace Ω]
+
+/--
+`prefixEvent C n = C₀ ∩ ... ∩ C_{n-1}`.
+
+Questo rappresenta l'evento:
+"i primi n frammenti critici sono compromessi".
+-/
+def prefixEvent (C : ℕ → Set Ω) : ℕ → Set Ω
+  | 0 => Set.univ
+  | n + 1 => prefixEvent C n ∩ C n
+
+/--
+Modello formale minimale del Teorema 17a.1.
+
+Non assume indipendenza.
+Assume solo il bound condizionato uniforme:
+
+  μ[Cᵢ | C₀ ∩ ... ∩ Cᵢ₋₁] ≤ pcomp
+
+e la regola di catena probabilistica.
+-/
+structure DependentCollusionModel (μ : Measure Ω) where
+  isProb : IsProbabilityMeasure μ
+
+  m : ℕ
+  C : ℕ → Set Ω
+
+  Rec : Set Ω
+
+  pcomp : ℝ≥0∞
+  hpcomp_lt_one : pcomp < 1
+
+  rec_requires_all :
+    Rec ⊆ prefixEvent C m
+
+  chain_rule_step :
+    ∀ i : ℕ,
+      i < m →
+        μ (prefixEvent C (i + 1))
+          =
+        μ (prefixEvent C i) * μ[C i | prefixEvent C i]
+
+  conditional_bound :
+    ∀ i : ℕ,
+      i < m →
+        μ[C i | prefixEvent C i] ≤ pcomp
+
+/--
+Lemma tecnico: probabilità di compromissione dei primi `n` frammenti critici.
+
+Questo è il cuore non-tautologico:
+si dimostra per induzione usando la chain rule e il bound condizionato.
+-/
+theorem prefix_probability_bound
+    {μ : Measure Ω}
+    (M : DependentCollusionModel μ) :
+    μ (prefixEvent M.C M.m) ≤ M.pcomp ^ M.m := by
+  letI : IsProbabilityMeasure μ := M.isProb
+
+  have h :
+      ∀ n : ℕ,
+        n ≤ M.m →
+          μ (prefixEvent M.C n) ≤ M.pcomp ^ n := by
+    intro n hn
+    induction n with
+    | zero =>
+        simp [prefixEvent]
+    | succ n ih =>
+        have hn_lt : n < M.m := Nat.lt_of_succ_le hn
+
+        calc
+          μ (prefixEvent M.C (n + 1))
+              = μ (prefixEvent M.C n) *
+                μ[M.C n | prefixEvent M.C n] := by
+                  exact M.chain_rule_step n hn_lt
+          _ ≤ M.pcomp ^ n * M.pcomp := by
+                  exact mul_le_mul' (ih (Nat.le_trans (Nat.le_succ n) hn))
+                                    (M.conditional_bound n hn_lt)
+          _ = M.pcomp ^ (n + 1) := by
+                  rw [pow_succ]
+
+  exact h M.m le_rfl
+
+/--
+Teorema 17a.1 CNVS:
+
+Se la ricostruzione non autorizzata richiede tutti gli `m` frammenti critici,
+e ogni compromissione condizionata è uniformemente limitata da `pcomp`,
+allora:
+
+  μ(Rec*) ≤ pcomp^m
+-/
+theorem theorem_17a_dependent_collusion_bound
+    {μ : Measure Ω}
+    (M : DependentCollusionModel μ) :
+    μ M.Rec ≤ M.pcomp ^ M.m := by
+  exact le_trans
+    (measure_mono M.rec_requires_all)
+    (prefix_probability_bound M)
+
+end CNVS

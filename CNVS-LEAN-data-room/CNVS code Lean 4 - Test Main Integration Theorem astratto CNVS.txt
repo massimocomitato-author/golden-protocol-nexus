@@ -1,0 +1,151 @@
+import Mathlib
+
+open Filter
+open scoped Topology
+
+namespace CNVSMainIntegration
+
+/--
+Strato strutturale minimo CNVS.
+
+Non prova di nuovo gli assiomi:
+qui li rappresentiamo come condizioni già verificate
+nei moduli precedenti.
+-/
+structure CNVSStructuralLayer where
+  LocalGlobalSeparated : Prop
+  KnowledgeRestricted : Prop
+  ReconstructionConsistent : Prop
+  StateRejectionLaw : Prop
+
+/--
+Strato probabilistico CNVS.
+
+`PRec n` = probabilità di ricostruzione non autorizzata alla scala n.
+`SecurityBound n` = bound teorico, per esempio:
+- pComp(n)^m(n)
+- ChernoffBound(n)
+- binomial tail bound
+-/
+structure CNVSProbabilisticLayer where
+  PRec : ℕ → ℝ
+  SecurityBound : ℕ → ℝ
+
+  hPRec_nonneg :
+    ∀ n, 0 ≤ PRec n
+
+  hSecurityBound_nonneg :
+    ∀ n, 0 ≤ SecurityBound n
+
+  hReconstructionBound :
+    ∀ n, PRec n ≤ SecurityBound n
+
+  hSecurityBoundTendsZero :
+    Tendsto SecurityBound atTop (𝓝 0)
+
+/--
+Sistema CNVS integrato.
+
+Contiene:
+- layer strutturale;
+- layer probabilistico;
+- assunzione che il layer strutturale sia soddisfatto.
+-/
+structure CNVSIntegratedSystem where
+  structural : CNVSStructuralLayer
+  probabilistic : CNVSProbabilisticLayer
+
+  hLocalGlobalSeparated :
+    structural.LocalGlobalSeparated
+
+  hKnowledgeRestricted :
+    structural.KnowledgeRestricted
+
+  hReconstructionConsistent :
+    structural.ReconstructionConsistent
+
+  hStateRejectionLaw :
+    structural.StateRejectionLaw
+
+/--
+Main Integration Theorem CNVS.
+
+Se:
+- il sistema soddisfa il layer strutturale CNVS;
+- la probabilità di ricostruzione è sempre dominata da un bound;
+- il bound tende a zero;
+
+allora:
+la probabilità di ricostruzione non autorizzata tende a zero.
+-/
+theorem cnvs_main_emergent_security
+    (S : CNVSIntegratedSystem) :
+    Tendsto S.probabilistic.PRec atTop (𝓝 0) := by
+  apply squeeze_zero
+  · exact S.probabilistic.hPRec_nonneg
+  · exact S.probabilistic.hReconstructionBound
+  · exact S.probabilistic.hSecurityBoundTendsZero
+
+/--
+Esempio concreto integrato.
+
+PRec(n) = 1 / (n + 1)
+SecurityBound(n) = 1 / (n + 1)
+
+Il layer strutturale è marcato come soddisfatto,
+coerentemente con i moduli già testati separatamente.
+-/
+noncomputable def ExampleIntegratedSystem :
+    CNVSIntegratedSystem where
+
+  structural := {
+    LocalGlobalSeparated := True
+    KnowledgeRestricted := True
+    ReconstructionConsistent := True
+    StateRejectionLaw := True
+  }
+
+  probabilistic := {
+    PRec := fun n => 1 / ((n : ℝ) + 1)
+    SecurityBound := fun n => 1 / ((n : ℝ) + 1)
+
+    hPRec_nonneg := by
+      intro n
+      positivity
+
+    hSecurityBound_nonneg := by
+      intro n
+      positivity
+
+    hReconstructionBound := by
+      intro n
+      rfl
+
+    hSecurityBoundTendsZero := by
+      have hden :
+          Tendsto (fun n : ℕ => ((n : ℝ) + 1)) atTop atTop := by
+        have hn :
+            Tendsto (fun n : ℕ => (n : ℝ)) atTop atTop := by
+          exact tendsto_natCast_atTop_atTop
+        exact tendsto_atTop_add_const_right atTop 1 hn
+
+      have hinv :
+          Tendsto
+            (fun n : ℕ => (((n : ℝ) + 1)⁻¹))
+            atTop
+            (𝓝 0) := by
+        exact tendsto_inv_atTop_zero.comp hden
+
+      simpa [one_div] using hinv
+  }
+
+  hLocalGlobalSeparated := by trivial
+  hKnowledgeRestricted := by trivial
+  hReconstructionConsistent := by trivial
+  hStateRejectionLaw := by trivial
+
+example :
+    Tendsto ExampleIntegratedSystem.probabilistic.PRec atTop (𝓝 0) := by
+  exact cnvs_main_emergent_security ExampleIntegratedSystem
+
+end CNVSMainIntegration

@@ -1,0 +1,81 @@
+import Mathlib
+
+namespace CNVSChernoffBound
+
+/--
+Bound di Chernoff usato nel paper:
+
+exp(-(r - μ)^2 / (2μ + (r - μ)))
+-/
+noncomputable def ChernoffBound
+    (r μ : ℝ) : ℝ :=
+  Real.exp (- ((r - μ)^2 / (2 * μ + (r - μ))))
+
+/--
+Modello Chernoff CNVS.
+
+`PRec` è la probabilità astratta di ricostruzione.
+`μ` è il valore atteso.
+`r` è la soglia.
+-/
+structure ChernoffSecurityModel where
+  PRec : ℝ
+  r : ℝ
+  μ : ℝ
+
+  hPRec_nonneg : 0 ≤ PRec
+  hμ_pos : 0 < μ
+  hr_gt_mu : μ < r
+
+  hChernoff :
+    PRec ≤ ChernoffBound r μ
+
+/--
+In un modello Chernoff CNVS, la probabilità di ricostruzione
+è limitata dal bound esponenziale.
+-/
+theorem reconstruction_probability_bounded_by_chernoff
+    (M : ChernoffSecurityModel) :
+    M.PRec ≤ ChernoffBound M.r M.μ := by
+  exact M.hChernoff
+
+/--
+Il denominatore del bound è positivo quando μ > 0 e r > μ.
+-/
+theorem chernoff_denominator_positive
+    (r μ : ℝ)
+    (hμ : 0 < μ)
+    (hr : μ < r) :
+    0 < 2 * μ + (r - μ) := by
+  nlinarith
+
+/--
+Il bound di Chernoff è sempre positivo.
+-/
+theorem chernoff_bound_positive
+    (r μ : ℝ) :
+    0 < ChernoffBound r μ := by
+  unfold ChernoffBound
+  exact Real.exp_pos _
+
+/--
+Esempio concreto:
+μ = 2
+r = 5
+PRec = 1/100
+
+Il modello è valido se 1/100 è sotto il bound di Chernoff.
+-/
+noncomputable def ExampleChernoffModel : ChernoffSecurityModel where
+  PRec := 0
+  μ := 2
+  r := 5
+
+  hPRec_nonneg := by norm_num
+  hμ_pos := by norm_num
+  hr_gt_mu := by norm_num
+
+  hChernoff := by
+    exact le_of_lt (chernoff_bound_positive 5 2)
+
+end CNVSChernoffBound

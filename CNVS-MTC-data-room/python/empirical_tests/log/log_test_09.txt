@@ -1,0 +1,65 @@
+--- CNVS STRUCTURAL PROOF-OF-CONCEPT AND AUTOMATED TEST SUITE ---
+
+[Adversary Public View]
+{
+  "epoch": "epoch_zero",
+  "public_selectors": [
+    "tau_05809606383d3c3c6e83684603bb3118",
+    "tau_d2143e594059d481a878ac1326d33dca",
+    "tau_95ecd0699e84287cb1e0c5cbfa77daea",
+    "tau_1cc52ff5e96d99b96403c8487e5df8fa"
+  ],
+  "C_pub_granted": "structural_semantic_consistency",
+  "C_int_hidden": [
+    "theta_C",
+    "hidden_relation_binding",
+    "true_values",
+    "commitment_salts",
+    "verifier_credentials"
+  ]
+}
+
+[Scenario 1] Honest baseline
+Condition: All submitted values are authentic, locally admissible, and globally invariant-consistent.
+Result: ACCEPTED: candidate state satisfies the implemented pedagogical invariant family.
+Barrier outcomes: {"Submission_Set": "PASS", "Identity": "PASS", "Local_Validation": "PASS", "Inv_C": "PASS"}
+
+[Scenario 2] Missing fragment
+Condition: One expected terminal submission is absent.
+Result: VETO: current-instance submission set is incomplete or structurally inconsistent.
+Barrier outcomes: {"Submission_Set": "FAIL", "Identity": "SKIPPED", "Local_Validation": "SKIPPED", "Inv_C": "SKIPPED"}
+
+[Scenario 3] Geometric forgery
+Condition: A well-typed false floor value passes V_L but violates c_1.
+Result: VETO: hidden pedagogical invariant family C_int failed.
+Barrier outcomes: {"Submission_Set": "PASS", "Identity": "PASS", "Local_Validation": "PASS", "Inv_C": "FAIL"}
+
+[Scenario 4] Owner/city forgery
+Condition: Option B coverage check: owner and city are well typed but violate hidden commitments c_2 and c_3.
+Result: VETO: hidden pedagogical invariant family C_int failed.
+Barrier outcomes: {"Submission_Set": "PASS", "Identity": "PASS", "Local_Validation": "PASS", "Inv_C": "FAIL"}
+
+[Scenario 5] False local claim
+Condition: A compromised verifier signs local_admissible=True for bool where exact int is required. Global recomputation detects it.
+Result: VETO: recomputed local admissibility failed or contradicted the signed local claim.
+Barrier outcomes: {"Submission_Set": "PASS", "Identity": "PASS", "Local_Validation": "FAIL", "Inv_C": "SKIPPED"}
+
+[Scenario 6] Message tampering
+Condition: The observed value is changed after signature generation.
+Result: VETO: verifier identity, instance binding, or message integrity failed.
+Barrier outcomes: {"Submission_Set": "PASS", "Identity": "FAIL", "Local_Validation": "SKIPPED", "Inv_C": "SKIPPED"}
+
+[Scenario 7] Epoch replay proxy
+Condition: Legacy epoch-style replay protection rejects evidence signed for a different epoch label.
+Result: VETO: verifier identity, instance binding, or message integrity failed.
+Barrier outcomes: {"Submission_Set": "PASS", "Identity": "FAIL", "Local_Validation": "SKIPPED", "Inv_C": "SKIPPED"}
+
+[Scenario 8] Full refresh replay
+Condition: Evidence from the old structural instance is presented to a fully refreshed state with new selectors, credentials, binding, theta_C, and epoch.
+Result: VETO: current-instance submission set is incomplete or structurally inconsistent.
+Barrier outcomes: {"Submission_Set": "FAIL", "Identity": "SKIPPED", "Local_Validation": "SKIPPED", "Inv_C": "SKIPPED"}
+
+[Scenario 9] C_int disclosure break
+Condition: Hidden role/parameter disclosure plus separately granted credential control allows synthesis of an alternative state that satisfies the implemented invariant family.
+Result: ACCEPTED: candidate state satisfies the implemented pedagogical invariant family.
+Barrier outcomes: {"Submission_Set": "PASS", "Identity": "PASS", "Local_Validation": "PASS", "Inv_C": "PASS"}

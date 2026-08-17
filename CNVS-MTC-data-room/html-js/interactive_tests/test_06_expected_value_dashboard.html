@@ -1,0 +1,480 @@
+<!--
+==============================================================================
+CNVS FRAMEWORK - EXECUTION ENVIRONMENT
+Copyright (c) 2026 Massimo Comitato.
+
+This file is part of the CNVS MTC Data Room.
+Licensed under the Creative Commons Attribution-NonCommercial 4.0 International
+License (CC BY-NC 4.0), or under the repository license specified in LICENSE.
+
+Commercial use is prohibited without prior written authorization.
+Academic review and technical due diligence use are permitted under the license.
+
+SPDX-License-Identifier: CC-BY-NC-4.0
+==============================================================================
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!--
+    Test Name:
+    Test 6 - Interactive Deterministic Analytical Dashboard of Exact Injective
+             Reconstruction Proxy and Expected Attack Payoff.
+
+    filename = "test_06_expected_value_dashboard.html"
+
+    CLASSIFICATION:
+    This file is an interactive deterministic analytical dashboard.
+    It is not a Monte Carlo simulation, an empirical validation, or an
+    independent proof of CNVS.
+
+    THEORETICAL ASSUMPTIONS:
+      1. Randomized injective assignment of m critical fragments to Q verifiers.
+      2. r verifiers belong to the adversarial coalition.
+      3. The residual min-entropy bound is deliberately saturated:
+             p_inf = 2^(-h_min)
+         although the formal relation is:
+             p_inf <= 2^(-h_min).
+      4. Complete compromise of all m critical fragments is pessimistically
+         treated as sufficient for unauthorized reconstruction. Therefore the
+         displayed success probability is a worst-case reconstruction proxy.
+      5. Theorem 4 supplies the upper bound:
+             P(Rec*) <= p_comp^m
+         with:
+             p_comp = q + (1 - q) p_inf.
+      6. The exact injective proxy is calculated through the hypergeometric law.
+      7. Slashing is applied only to directly compromised critical submitters
+         after a failed attack, assuming their fraudulent participation is
+         identifiable through authenticated system evidence.
+
+    ECONOMIC INTERPRETATION:
+    The dashboard displays expected attack payoff per attempted cycle:
+        successful-attack reward minus veto-proxy-triggered slashing.
+    It is not complete net profit because bribery, coordination, capital,
+    operating, opportunity, and future-exclusion costs are not included.
+
+    GLOBAL-VETO INTERPRETATION:
+    V_G is not executed by this dashboard. The failed critical-set-compromise
+    branch is used as an analytical proxy for rejection by the Global Veto.
+    -->
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CNVS Interactive Analytical Dashboard</title>
+
+    <!-- Pinned dependency version for reproducibility. -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --panel-bg: #161b22;
+            --panel-soft: #0d1117;
+            --text-main: #c9d1d9;
+            --text-muted: #8b949e;
+            --text-accent: #58a6ff;
+            --border-color: #30363d;
+            --warning: #d29922;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1180px;
+            margin: 0 auto;
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 24px;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+        }
+        h1 {
+            color: var(--text-accent);
+            text-align: center;
+            font-size: 1.55rem;
+            margin: 0;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .subtitle {
+            color: var(--text-muted);
+            text-align: center;
+            margin: 12px 0 22px;
+            line-height: 1.45;
+            font-size: 0.92rem;
+        }
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+            padding: 18px;
+            background-color: var(--panel-soft);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+        .control-group { display: flex; flex-direction: column; min-width: 0; }
+        label {
+            font-size: 0.88rem;
+            font-weight: 650;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        .value-display { color: var(--text-accent); white-space: nowrap; }
+        input[type="range"] { width: 100%; cursor: pointer; }
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            margin: 18px 0;
+        }
+        .metric-card {
+            border: 1px solid var(--border-color);
+            background: var(--panel-soft);
+            border-radius: 7px;
+            padding: 13px 14px;
+            min-height: 78px;
+        }
+        .metric-label { color: var(--text-muted); font-size: 0.78rem; line-height: 1.3; }
+        .metric-value {
+            color: var(--text-main);
+            font-size: 1.13rem;
+            font-weight: 700;
+            margin-top: 6px;
+            word-break: break-word;
+        }
+        .alert {
+            display: none;
+            margin: 16px 0;
+            border: 1px solid var(--warning);
+            background: rgba(210, 153, 34, 0.12);
+            color: #e3b341;
+            border-radius: 7px;
+            padding: 12px 14px;
+            font-size: 0.9rem;
+            line-height: 1.45;
+        }
+        .chart-grid { display: grid; grid-template-columns: 1fr; gap: 22px; }
+        .chart-panel {
+            background: var(--panel-soft);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 14px;
+        }
+        .chart-title { margin: 0 0 8px; color: var(--text-main); font-size: 1rem; font-weight: 700; }
+        .chart-container { position: relative; height: 390px; width: 100%; }
+        .explanation { color: var(--text-muted); margin-top: 22px; line-height: 1.6; font-size: 0.86rem; }
+        .formula {
+            display: block;
+            margin: 8px 0;
+            padding: 9px 11px;
+            background: var(--panel-soft);
+            border-left: 3px solid var(--text-accent);
+            color: var(--text-main);
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            overflow-x: auto;
+        }
+        @media (min-width: 1000px) { .chart-grid { grid-template-columns: 1fr 1fr; } }
+    </style>
+</head>
+
+<body>
+<div class="container">
+    <h1>CNVS Interactive Analytical Dashboard</h1>
+    <div class="subtitle">
+        Exact injective-assignment reconstruction proxy and expected attack payoff.
+        Deterministic analytical exploration; no Monte Carlo sampling is performed.
+    </div>
+
+    <div class="controls">
+        <div class="control-group">
+            <label>Total Verifiers (Q)<span id="qv_val" class="value-display">100</span></label>
+            <input type="range" id="qv" min="20" max="500" step="10" value="100">
+        </div>
+        <div class="control-group">
+            <label>Colluding Verifiers (r)<span id="r_val" class="value-display">80</span></label>
+            <input type="range" id="r" min="0" max="100" step="1" value="80">
+        </div>
+        <div class="control-group">
+            <label>Residual Min-Entropy (h_min)<span id="h_min_val" class="value-display">1.0</span></label>
+            <input type="range" id="h_min" min="0" max="10" step="0.1" value="1.0">
+        </div>
+        <div class="control-group">
+            <label>Successful-Attack Reward<span id="reward_val" class="value-display">10,000</span></label>
+            <input type="range" id="reward" min="0" max="50000" step="1000" value="10000">
+        </div>
+        <div class="control-group">
+            <label>Slashing per Identified Critical Submitter<span id="penalty_val" class="value-display">-500</span></label>
+            <input type="range" id="penalty" min="-5000" max="0" step="100" value="-500">
+        </div>
+        <div class="control-group">
+            <label>Maximum Critical Fragments Shown<span id="m_max_val" class="value-display">20</span></label>
+            <input type="range" id="m_max" min="1" max="100" step="1" value="20">
+        </div>
+    </div>
+
+    <div id="security_alert" class="alert"></div>
+
+    <div class="metrics">
+        <div class="metric-card"><div class="metric-label">Effective adversarial fraction q = r/Q</div><div id="metric_q" class="metric-value">0.8000</div></div>
+        <div class="metric-card"><div class="metric-label">Worst-case saturated inference probability p_inf</div><div id="metric_p_inf" class="metric-value">0.500000</div></div>
+        <div class="metric-card"><div class="metric-label">Composite Theorem 4 bound parameter p_comp</div><div id="metric_p_comp" class="metric-value">0.900000</div></div>
+        <div class="metric-card"><div class="metric-label">First m with negative expected attack payoff</div><div id="metric_break_even" class="metric-value">Not reached</div></div>
+        <div class="metric-card"><div class="metric-label">Exact reconstruction proxy at displayed m_max</div><div id="metric_success_at_max" class="metric-value">—</div></div>
+        <div class="metric-card"><div class="metric-label">Expected slashed critical submitters at m_max</div><div id="metric_slashed_at_max" class="metric-value">—</div></div>
+    </div>
+
+    <div class="chart-grid">
+        <div class="chart-panel">
+            <div class="chart-title">Expected attack payoff per attempted cycle</div>
+            <div class="chart-container"><canvas id="payoffChart"></canvas></div>
+        </div>
+        <div class="chart-panel">
+            <div class="chart-title">Exact injective proxy versus Theorem 4 upper bound</div>
+            <div class="chart-container"><canvas id="probabilityChart"></canvas></div>
+        </div>
+    </div>
+
+    <div class="explanation">
+        <strong>Analytical model.</strong> For each critical-fragment count <em>m</em>, the dashboard enumerates the
+        hypergeometric distribution of the number <em>h</em> of critical fragments assigned to honest verifiers:
+        <span class="formula">P(H=h) = C(Q-r,h) C(r,m-h) / C(Q,m)</span>
+        Conditional on <em>h</em>, every honest-assigned critical fragment must be inferred, producing the worst-case reconstruction proxy
+        <span class="formula">P_proxy(m) = Σ_h P(H=h) p_inf^h</span>
+        and the exact expected attack payoff
+        <span class="formula">E[payoff] = Σ_h P(H=h) [p_inf^h R + (1-p_inf^h)(m-h)L]</span>
+        where <em>R</em> is the successful-attack reward and <em>L ≤ 0</em> is the slashing applied to each directly compromised critical submitter after a failed attempt. The dashed probability curve is the Theorem 4 upper bound <em>p_comp<sup>m</sup></em>; it is not used to generate the exact injective curve. Complete critical-set compromise is pessimistically treated as sufficient for reconstruction. The displayed payoff is not complete net profit, and the failed branch is only an analytical proxy for Global-Veto rejection.
+    </div>
+</div>
+
+<script>
+"use strict";
+
+const payoffContext = document.getElementById("payoffChart").getContext("2d");
+const probabilityContext = document.getElementById("probabilityChart").getContext("2d");
+let payoffChart;
+let probabilityChart;
+
+function logFactorials(n) {
+    const values = new Array(n + 1);
+    values[0] = 0;
+    for (let i = 1; i <= n; i++) values[i] = values[i - 1] + Math.log(i);
+    return values;
+}
+
+function logCombination(n, k, logFacts) {
+    if (!Number.isInteger(n) || !Number.isInteger(k) || k < 0 || k > n) return Number.NEGATIVE_INFINITY;
+    return logFacts[n] - logFacts[k] - logFacts[n - k];
+}
+
+function hypergeometricProbability(Q, r, m, h, logFacts) {
+    const honest = Q - r;
+    if (h < 0 || h > honest || m - h < 0 || m - h > r) return 0;
+    const logP = logCombination(honest, h, logFacts) + logCombination(r, m - h, logFacts) - logCombination(Q, m, logFacts);
+    return Math.exp(logP);
+}
+
+function exactInjectiveMetrics(Q, r, m, pInf, reward, penalty, logFacts) {
+    const honest = Q - r;
+    const minHonestHits = Math.max(0, m - r);
+    const maxHonestHits = Math.min(m, honest);
+    let reconstructionProxy = 0;
+    let expectedPayoff = 0;
+    let expectedSlashedNodes = 0;
+    let probabilityMass = 0;
+
+    for (let h = minHonestHits; h <= maxHonestHits; h++) {
+        const pH = hypergeometricProbability(Q, r, m, h, logFacts);
+        const successGivenH = Math.pow(pInf, h);
+        const directlyCompromisedCritical = m - h;
+        const failureGivenH = 1 - successGivenH;
+        probabilityMass += pH;
+        reconstructionProxy += pH * successGivenH;
+        expectedSlashedNodes += pH * failureGivenH * directlyCompromisedCritical;
+        expectedPayoff += pH * (successGivenH * reward + failureGivenH * directlyCompromisedCritical * penalty);
+    }
+
+    if (Math.abs(probabilityMass - 1) > 1e-9) {
+        throw new Error(`Hypergeometric probability mass is inconsistent: ${probabilityMass}`);
+    }
+    return { reconstructionProxy, expectedPayoff, expectedSlashedNodes };
+}
+
+function formatProbability(value) {
+    if (value === 0) return "0";
+    if (value < 1e-4) return value.toExponential(3);
+    return value.toFixed(6);
+}
+
+function formatCredits(value) {
+    return value.toLocaleString(undefined, { maximumFractionDigits: 1 });
+}
+
+function initializeCharts() {
+    payoffChart = new Chart(payoffContext, {
+        type: "bar",
+        data: { labels: [], datasets: [{ label: "Expected attack payoff", data: [], backgroundColor: [], borderColor: "#30363d", borderWidth: 1 }] },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+            plugins: { legend: { display: false }, tooltip: { callbacks: { label: (context) => ` Payoff: ${formatCredits(context.parsed.y)} credits` } } },
+            scales: {
+                x: { title: { display: true, text: "Critical fragments (m)", color: "#8b949e" }, grid: { color: "#30363d" }, ticks: { color: "#c9d1d9" } },
+                y: { title: { display: true, text: "Expected attack payoff [credits]", color: "#8b949e" }, grid: { color: "#30363d" }, ticks: { color: "#c9d1d9" } }
+            }
+        },
+        plugins: [{
+            id: "zeroPayoffLine",
+            afterDraw(chart) {
+                const yAxis = chart.scales.y;
+                const chartArea = chart.chartArea;
+                if (!yAxis || !chartArea) return;
+                const yZero = yAxis.getPixelForValue(0);
+                if (yZero < chartArea.top || yZero > chartArea.bottom) return;
+                const ctx = chart.ctx;
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(chartArea.left, yZero);
+                ctx.lineTo(chartArea.right, yZero);
+                ctx.lineWidth = 1.6;
+                ctx.strokeStyle = "#8b949e";
+                ctx.setLineDash([5, 4]);
+                ctx.stroke();
+                ctx.restore();
+            }
+        }]
+    });
+
+    probabilityChart = new Chart(probabilityContext, {
+        type: "line",
+        data: {
+            labels: [],
+            datasets: [
+                { label: "Exact injective reconstruction proxy", data: [], borderColor: "#58a6ff", backgroundColor: "rgba(88, 166, 255, 0.15)", pointRadius: 2.5, borderWidth: 2.2, tension: 0 },
+                { label: "Theorem 4 upper bound", data: [], borderColor: "#d29922", backgroundColor: "rgba(210, 153, 34, 0.10)", pointRadius: 0, borderWidth: 2, borderDash: [7, 5], tension: 0 }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+            interaction: { mode: "index", intersect: false },
+            plugins: {
+                legend: { labels: { color: "#c9d1d9" } },
+                tooltip: { callbacks: { label: (context) => ` ${context.dataset.label}: ${formatProbability(context.parsed.y)}` } }
+            },
+            scales: {
+                x: { title: { display: true, text: "Critical fragments (m)", color: "#8b949e" }, grid: { color: "#30363d" }, ticks: { color: "#c9d1d9" } },
+                y: {
+                    type: "logarithmic",
+                    min: 1e-12,
+                    max: 1,
+                    title: { display: true, text: "Probability / upper bound", color: "#8b949e" },
+                    grid: { color: "#30363d" },
+                    ticks: { color: "#c9d1d9", callback: (value) => { const exponent = Math.log10(value); return Number.isInteger(exponent) ? `1e${exponent}` : ""; } }
+                }
+            }
+        }
+    });
+}
+
+function synchronizeControlBounds() {
+    const Q = Number.parseInt(document.getElementById("qv").value, 10);
+    const rInput = document.getElementById("r");
+    const mMaxInput = document.getElementById("m_max");
+    rInput.max = String(Q);
+    mMaxInput.max = String(Q);
+    if (Number.parseInt(rInput.value, 10) > Q) rInput.value = String(Q);
+    if (Number.parseInt(mMaxInput.value, 10) > Q) mMaxInput.value = String(Q);
+}
+
+function updateDashboard() {
+    synchronizeControlBounds();
+
+    const Q = Number.parseInt(document.getElementById("qv").value, 10);
+    const r = Number.parseInt(document.getElementById("r").value, 10);
+    const hMin = Number.parseFloat(document.getElementById("h_min").value);
+    const reward = Number.parseFloat(document.getElementById("reward").value);
+    const penalty = Number.parseFloat(document.getElementById("penalty").value);
+    const mMax = Number.parseInt(document.getElementById("m_max").value, 10);
+
+    if (!Number.isInteger(Q) || !Number.isInteger(r) || !Number.isInteger(mMax) || Q <= 0 || r < 0 || r > Q || mMax <= 0 || mMax > Q || hMin < 0 || reward < 0 || penalty > 0) {
+        throw new Error("Invalid dashboard parameter state.");
+    }
+
+    const q = r / Q;
+    const pInf = Math.pow(2, -hMin);
+    const pComp = q + (1 - q) * pInf;
+
+    document.getElementById("qv_val").textContent = Q.toLocaleString();
+    document.getElementById("r_val").textContent = r.toLocaleString();
+    document.getElementById("h_min_val").textContent = hMin.toFixed(1);
+    document.getElementById("reward_val").textContent = reward.toLocaleString();
+    document.getElementById("penalty_val").textContent = penalty.toLocaleString();
+    document.getElementById("m_max_val").textContent = mMax.toLocaleString();
+    document.getElementById("metric_q").textContent = q.toFixed(4);
+    document.getElementById("metric_p_inf").textContent = formatProbability(pInf);
+    document.getElementById("metric_p_comp").textContent = formatProbability(pComp);
+
+    const alert = document.getElementById("security_alert");
+    if (pComp >= 1 - 1e-15) {
+        alert.style.display = "block";
+        alert.textContent = "Security assumption collapsed: p_comp = 1. No finite critical-fragment count suppresses the worst-case reconstruction proxy. Slashing cannot create deterrence in this model because the success branch occurs with certainty.";
+    } else {
+        alert.style.display = "none";
+        alert.textContent = "";
+    }
+
+    const logFacts = logFactorials(Q);
+    const labels = [];
+    const payoffValues = [];
+    const payoffColors = [];
+    const exactProbabilities = [];
+    const theoremBounds = [];
+    const expectedSlashedValues = [];
+    let firstNegativeM = null;
+
+    for (let m = 1; m <= mMax; m++) {
+        const metrics = exactInjectiveMetrics(Q, r, m, pInf, reward, penalty, logFacts);
+        const theoremBound = Math.pow(pComp, m);
+        if (metrics.reconstructionProxy - theoremBound > 1e-10) {
+            throw new Error("Exact injective reconstruction proxy exceeded the Theorem 4 bound.");
+        }
+        labels.push(m);
+        payoffValues.push(metrics.expectedPayoff);
+        exactProbabilities.push(Math.max(metrics.reconstructionProxy, 1e-12));
+        theoremBounds.push(Math.max(theoremBound, 1e-12));
+        expectedSlashedValues.push(metrics.expectedSlashedNodes);
+        payoffColors.push(metrics.expectedPayoff >= 0 ? "rgba(46, 160, 67, 0.82)" : "rgba(248, 81, 73, 0.82)");
+        if (firstNegativeM === null && metrics.expectedPayoff < 0) firstNegativeM = m;
+    }
+
+    document.getElementById("metric_break_even").textContent = firstNegativeM === null ? `Not reached for m ≤ ${mMax}` : `m = ${firstNegativeM}`;
+    document.getElementById("metric_success_at_max").textContent = formatProbability(exactProbabilities[exactProbabilities.length - 1]);
+    document.getElementById("metric_slashed_at_max").textContent = expectedSlashedValues[expectedSlashedValues.length - 1].toFixed(4);
+
+    payoffChart.data.labels = labels;
+    payoffChart.data.datasets[0].data = payoffValues;
+    payoffChart.data.datasets[0].backgroundColor = payoffColors;
+    payoffChart.update();
+
+    probabilityChart.data.labels = labels;
+    probabilityChart.data.datasets[0].data = exactProbabilities;
+    probabilityChart.data.datasets[1].data = theoremBounds;
+    probabilityChart.update();
+}
+
+document.querySelectorAll('input[type="range"]').forEach((input) => input.addEventListener("input", updateDashboard));
+initializeCharts();
+updateDashboard();
+</script>
+</body>
+</html>

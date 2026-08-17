@@ -1,0 +1,94 @@
+import Mathlib
+
+namespace CNVSBinomialTailFinal
+
+noncomputable def binomialTerm
+    (k i : Nat)
+    (p : ℝ) : ℝ :=
+  (Nat.choose k i : ℝ) * p ^ i * (1 - p) ^ (k - i)
+
+noncomputable def binomialTail
+    (k r : Nat)
+    (p : ℝ) : ℝ :=
+  (Finset.range (k + 1)).sum
+    (fun i =>
+      if r ≤ i then binomialTerm k i p else 0)
+
+theorem binomialTerm_nonnegative
+    (k i : Nat)
+    (p : ℝ)
+    (hp0 : 0 ≤ p)
+    (hp1 : p ≤ 1) :
+    0 ≤ binomialTerm k i p := by
+  unfold binomialTerm
+  positivity
+
+theorem binomialTail_nonnegative
+    (k r : Nat)
+    (p : ℝ)
+    (hp0 : 0 ≤ p)
+    (hp1 : p ≤ 1) :
+    0 ≤ binomialTail k r p := by
+  unfold binomialTail
+  apply Finset.sum_nonneg
+  intro i hi
+  by_cases h : r ≤ i
+  · simp [h]
+    exact binomialTerm_nonnegative k i p hp0 hp1
+  · simp [h]
+
+/--
+Manual expansion for the specific verified case:
+
+k = 3, r = 2, p = 1/2.
+
+Tail =
+C(3,2)(1/2)^2(1/2)^1 +
+C(3,3)(1/2)^3
+= 1/2.
+-/
+theorem binomialTail_3_2_half :
+    binomialTail 3 2 (1 / 2 : ℝ) = 1 / 2 := by
+  unfold binomialTail binomialTerm
+  norm_num [Finset.sum_range_succ]
+
+structure BinomialSecurityModel where
+  k : Nat
+  r : Nat
+  pEff : ℝ
+  PRec : ℝ
+
+  hpEff_nonneg : 0 ≤ pEff
+  hpEff_le_one : pEff ≤ 1
+  hPRec_nonneg : 0 ≤ PRec
+  hPRec_bound : PRec ≤ binomialTail k r pEff
+
+theorem reconstruction_probability_bounded_by_binomial_tail
+    (M : BinomialSecurityModel) :
+    M.PRec ≤ binomialTail M.k M.r M.pEff := by
+  exact M.hPRec_bound
+
+noncomputable def ExampleBinomialSecurityModel :
+    BinomialSecurityModel where
+  k := 3
+  r := 2
+  pEff := 1 / 2
+  PRec := 1 / 4
+
+  hpEff_nonneg := by norm_num
+  hpEff_le_one := by norm_num
+  hPRec_nonneg := by norm_num
+  hPRec_bound := by
+    rw [binomialTail_3_2_half]
+    norm_num
+
+example :
+    ExampleBinomialSecurityModel.PRec ≤
+      binomialTail
+        ExampleBinomialSecurityModel.k
+        ExampleBinomialSecurityModel.r
+        ExampleBinomialSecurityModel.pEff := by
+  exact reconstruction_probability_bounded_by_binomial_tail
+    ExampleBinomialSecurityModel
+
+end CNVSBinomialTailFinal

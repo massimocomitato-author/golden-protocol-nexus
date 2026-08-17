@@ -1,0 +1,779 @@
+<!--
+==============================================================================
+CNVS FRAMEWORK - EXECUTION ENVIRONMENT
+Copyright (c) 2026 Massimo Comitato.
+
+This file is part of the CNVS MTC Data Room.
+Licensed under the Creative Commons Attribution-NonCommercial 4.0 International
+License (CC BY-NC 4.0), or under the repository license specified in LICENSE.
+
+Commercial use is prohibited without prior written authorization.
+Academic review and technical due diligence use are permitted under the license.
+
+SPDX-License-Identifier: CC-BY-NC-4.0
+==============================================================================
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!--
+    Test Name:
+    Test 7 - Interactive Deterministic Exploration of the CNVS Theorem 4
+             Reconstruction Upper Bound.
+
+    filename = "test_07_reconstruction_decay_dashboard.html"
+
+    CLASSIFICATION:
+    This file is an interactive deterministic analytical dashboard.
+    It is not a Monte Carlo simulation, an empirical validation, or an
+    independent proof of CNVS.
+
+    THEORETICAL ASSUMPTIONS:
+      1. Theorem 4 supplies the upper bound:
+             P(Rec*) <= p_comp^m
+      2. The composite conditional compromise bound is:
+             p_comp = q + (1 - q) p_inf
+      3. The residual min-entropy inference relation is:
+             p_inf <= 2^(-h_min)
+      4. WORST-CASE SATURATION:
+         This dashboard deliberately sets:
+             p_inf = 2^(-h_min)
+         granting the attacker the strongest inference probability admitted by
+         the selected residual min-entropy margin.
+
+    DISPLAYED QUANTITY:
+      B_T4(q) = [q + (1-q) 2^(-h_min)]^m
+
+    The dashboard plots log10(B_T4) directly. This avoids numerical underflow
+    and removes the need for an artificial probability floor.
+
+    SECURITY TARGET:
+      A selected eta defines the design target:
+             B_T4(q) <= eta
+      The largest admissible q under the selected m and h_min is calculated
+      analytically when it exists.
+
+    BFT REFERENCE:
+      The optional q=0.33 line is only an illustrative classical BFT reference.
+      It is not a CNVS threshold.
+    -->
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>CNVS Interactive Theorem 4 Upper-Bound Explorer</title>
+
+    <!-- Pinned dependency version for reproducibility. -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --panel-bg: #161b22;
+            --panel-soft: #0d1117;
+            --text-main: #c9d1d9;
+            --text-muted: #8b949e;
+            --text-accent: #58a6ff;
+            --border-color: #30363d;
+            --curve: #2ea043;
+            --target: #d29922;
+            --warning: #f0883e;
+            --danger: #f85149;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1120px;
+            margin: 0 auto;
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 24px;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+        }
+
+        h1 {
+            color: var(--text-accent);
+            text-align: center;
+            font-size: 1.55rem;
+            margin: 0;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            text-align: center;
+            margin: 12px 0 22px;
+            line-height: 1.45;
+            font-size: 0.92rem;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+            padding: 18px;
+            background-color: var(--panel-soft);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        label {
+            font-size: 0.88rem;
+            font-weight: 650;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .value-display {
+            color: var(--text-accent);
+            white-space: nowrap;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+        }
+
+        .checkbox-row {
+            display: flex;
+            align-items: center;
+            min-height: 36px;
+            gap: 9px;
+            color: var(--text-main);
+            font-size: 0.88rem;
+        }
+
+        .checkbox-row input {
+            width: 17px;
+            height: 17px;
+            cursor: pointer;
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
+            gap: 12px;
+            margin: 18px 0;
+        }
+
+        .metric-card {
+            border: 1px solid var(--border-color);
+            background: var(--panel-soft);
+            border-radius: 7px;
+            padding: 13px 14px;
+            min-height: 78px;
+        }
+
+        .metric-label {
+            color: var(--text-muted);
+            font-size: 0.78rem;
+            line-height: 1.3;
+        }
+
+        .metric-value {
+            color: var(--text-main);
+            font-size: 1.12rem;
+            font-weight: 700;
+            margin-top: 6px;
+            word-break: break-word;
+        }
+
+        .alert {
+            display: none;
+            margin: 16px 0;
+            border: 1px solid var(--warning);
+            background: rgba(240, 136, 62, 0.12);
+            color: #ffa657;
+            border-radius: 7px;
+            padding: 12px 14px;
+            font-size: 0.9rem;
+            line-height: 1.45;
+        }
+
+        .chart-panel {
+            background: var(--panel-soft);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 14px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 540px;
+            width: 100%;
+        }
+
+        .explanation {
+            color: var(--text-muted);
+            margin-top: 22px;
+            line-height: 1.6;
+            font-size: 0.86rem;
+        }
+
+        .formula {
+            display: block;
+            margin: 8px 0;
+            padding: 9px 11px;
+            background: var(--panel-soft);
+            border-left: 3px solid var(--text-accent);
+            color: var(--text-main);
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+
+<body>
+<div class="container">
+    <h1>CNVS Interactive Theorem 4 Upper-Bound Explorer</h1>
+
+    <div class="subtitle">
+        Deterministic exploration of the reconstruction upper bound under an
+        assumed residual conditional min-entropy margin. No stochastic simulation
+        or empirical validation is performed.
+    </div>
+
+    <div class="controls">
+        <div class="control-group">
+            <label>
+                Critical Fragments (m)
+                <span id="m_val" class="value-display">50</span>
+            </label>
+            <input type="range" id="m" min="1" max="200" step="1" value="50">
+        </div>
+
+        <div class="control-group">
+            <label>
+                Residual Min-Entropy (h_min)
+                <span id="h_min_val" class="value-display">2.0</span>
+            </label>
+            <input type="range" id="h_min" min="0" max="15" step="0.1" value="2.0">
+        </div>
+
+        <div class="control-group">
+            <label>
+                Security Target Exponent
+                <span id="eta_exp_val" class="value-display">η = 1e-6</span>
+            </label>
+            <input type="range" id="eta_exp" min="1" max="30" step="1" value="6">
+        </div>
+
+        <div class="control-group">
+            <label>Reference Marker</label>
+            <div class="checkbox-row">
+                <input type="checkbox" id="show_bft" checked>
+                <span>Show illustrative classical BFT reference at q = 0.33</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="security_alert" class="alert"></div>
+
+    <div class="metrics">
+        <div class="metric-card">
+            <div class="metric-label">Worst-case saturated inference probability p_inf</div>
+            <div id="metric_p_inf" class="metric-value">0.250000</div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-label">Upper bound at q = 0</div>
+            <div id="metric_q0" class="metric-value">—</div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-label">Upper bound at q = 0.33</div>
+            <div id="metric_q33" class="metric-value">—</div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-label">Largest q satisfying B_T4(q) ≤ η</div>
+            <div id="metric_qmax" class="metric-value">—</div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-label">Target η</div>
+            <div id="metric_eta" class="metric-value">1e-6</div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-label">Total-collusion control at q = 1</div>
+            <div id="metric_q1" class="metric-value">1</div>
+        </div>
+    </div>
+
+    <div class="chart-panel">
+        <div class="chart-container">
+            <canvas id="boundChart"></canvas>
+        </div>
+    </div>
+
+    <div class="explanation">
+        <strong>Displayed mathematical quantity.</strong>
+        The curve is not an exact reconstruction probability. It is the Theorem 4
+        upper bound:
+        <span class="formula">
+            B_T4(q) = [q + (1-q) 2^(-h_min)]^m
+        </span>
+
+        The formal inference relation is
+        <em>p_inf ≤ 2<sup>-h_min</sup></em>. This dashboard deliberately saturates
+        that limit and therefore uses the strongest inference probability admitted
+        by the selected entropy margin.
+
+        The vertical design marker is calculated from:
+        <span class="formula">
+            q_max = [η^(1/m) - p_inf] / [1 - p_inf]
+        </span>
+
+        when a feasible value exists. If even <em>q=0</em> violates the target,
+        no admissible colluding fraction exists under the selected parameters.
+        At <em>q=1</em>, the bound equals one for every finite <em>m</em>.
+        The optional 33% line is only a classical BFT reference and is not a CNVS
+        tolerance threshold.
+    </div>
+</div>
+
+<script>
+    "use strict";
+
+    const chartContext = document
+        .getElementById("boundChart")
+        .getContext("2d");
+
+    let boundChart;
+    let markerState = {
+        qMax: null,
+        showBft: true
+    };
+
+    const markerPlugin = {
+        id: "cnvsMarkers",
+
+        beforeDatasetsDraw(chart) {
+            const {ctx, chartArea, scales} = chart;
+
+            if (!chartArea || !scales.x || !scales.y) {
+                return;
+            }
+
+            ctx.save();
+
+            if (
+                markerState.qMax !== null &&
+                markerState.qMax >= 0 &&
+                markerState.qMax <= 1
+            ) {
+                const x = scales.x.getPixelForValue(markerState.qMax);
+
+                ctx.fillStyle = "rgba(46, 160, 67, 0.08)";
+                ctx.fillRect(
+                    chartArea.left,
+                    chartArea.top,
+                    Math.max(0, x - chartArea.left),
+                    chartArea.bottom - chartArea.top
+                );
+
+                ctx.beginPath();
+                ctx.moveTo(x, chartArea.top);
+                ctx.lineTo(x, chartArea.bottom);
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = "#2ea043";
+                ctx.setLineDash([7, 5]);
+                ctx.stroke();
+
+                ctx.setLineDash([]);
+                ctx.fillStyle = "#2ea043";
+                ctx.font = "12px sans-serif";
+                ctx.fillText(
+                    `q_max = ${markerState.qMax.toFixed(4)}`,
+                    Math.min(x + 7, chartArea.right - 105),
+                    chartArea.top + 18
+                );
+            }
+
+            if (markerState.showBft) {
+                const xBft = scales.x.getPixelForValue(0.33);
+
+                ctx.beginPath();
+                ctx.moveTo(xBft, chartArea.top);
+                ctx.lineTo(xBft, chartArea.bottom);
+                ctx.lineWidth = 1.5;
+                ctx.strokeStyle = "#8b949e";
+                ctx.setLineDash([4, 5]);
+                ctx.stroke();
+
+                ctx.setLineDash([]);
+                ctx.fillStyle = "#8b949e";
+                ctx.font = "11px sans-serif";
+                ctx.fillText(
+                    "Classical BFT reference — not a CNVS threshold",
+                    Math.min(xBft + 7, chartArea.right - 260),
+                    chartArea.bottom - 12
+                );
+            }
+
+            ctx.restore();
+        }
+    };
+
+    function log10(value) {
+        return Math.log(value) / Math.LN10;
+    }
+
+    function log10UpperBound(q, pInf, m) {
+        const pComp = q + (1 - q) * pInf;
+
+        if (pComp === 0) {
+            return Number.NEGATIVE_INFINITY;
+        }
+
+        return m * log10(pComp);
+    }
+
+    function formatBoundFromLog10(logValue) {
+        if (!Number.isFinite(logValue)) {
+            return "0";
+        }
+
+        if (Math.abs(logValue) < 1e-12) {
+            return "1";
+        }
+
+        if (logValue > -5) {
+            return Math.pow(10, logValue).toPrecision(6);
+        }
+
+        if (logValue >= -300) {
+            return Math.pow(10, logValue).toExponential(3);
+        }
+
+        return `10^(${logValue.toFixed(2)})`;
+    }
+
+    function calculateQMax(pInf, m, eta) {
+        if (pInf >= 1 - 1e-15) {
+            return {
+                status: "none",
+                qMax: null,
+                reason: "p_comp equals one for all q."
+            };
+        }
+
+        const targetRoot = Math.exp(Math.log(eta) / m);
+        const boundAtQ0 = Math.pow(pInf, m);
+
+        if (boundAtQ0 > eta * (1 + 1e-12)) {
+            return {
+                status: "none",
+                qMax: null,
+                reason: "Even q = 0 exceeds the selected target."
+            };
+        }
+
+        let qMax = (targetRoot - pInf) / (1 - pInf);
+        qMax = Math.max(0, Math.min(1, qMax));
+
+        return {
+            status: "feasible",
+            qMax,
+            reason: ""
+        };
+    }
+
+    function initializeChart() {
+        boundChart = new Chart(chartContext, {
+            type: "line",
+            data: {
+                datasets: [
+                    {
+                        label: "log10 of Theorem 4 reconstruction upper bound",
+                        data: [],
+                        parsing: false,
+                        borderColor: "#2ea043",
+                        backgroundColor: "rgba(46, 160, 67, 0.10)",
+                        borderWidth: 2.7,
+                        pointRadius: 0,
+                        fill: false,
+                        tension: 0
+                    },
+                    {
+                        label: "Security target log10(η)",
+                        data: [],
+                        parsing: false,
+                        borderColor: "#d29922",
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        borderDash: [8, 5],
+                        fill: false,
+                        tension: 0
+                    }
+                ]
+            },
+
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+
+                interaction: {
+                    mode: "nearest",
+                    intersect: false
+                },
+
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: "#c9d1d9"
+                        }
+                    },
+
+                    tooltip: {
+                        callbacks: {
+                            title(items) {
+                                if (!items.length) {
+                                    return "";
+                                }
+
+                                return `q = ${items[0].parsed.x.toFixed(3)}`;
+                            },
+
+                            label(context) {
+                                const logValue = context.parsed.y;
+
+                                if (context.datasetIndex === 0) {
+                                    return (
+                                        ` Upper bound: ${formatBoundFromLog10(logValue)}` +
+                                        `  [log10 = ${logValue.toFixed(3)}]`
+                                    );
+                                }
+
+                                return (
+                                    ` Target η: ${formatBoundFromLog10(logValue)}` +
+                                    `  [log10 = ${logValue.toFixed(0)}]`
+                                );
+                            }
+                        }
+                    }
+                },
+
+                scales: {
+                    x: {
+                        type: "linear",
+                        min: 0,
+                        max: 1,
+
+                        title: {
+                            display: true,
+                            text: "Fraction of colluding verifiers (q)",
+                            color: "#8b949e"
+                        },
+
+                        grid: {
+                            color: "#30363d"
+                        },
+
+                        ticks: {
+                            color: "#c9d1d9",
+                            stepSize: 0.1,
+                            callback: (value) => Number(value).toFixed(1)
+                        }
+                    },
+
+                    y: {
+                        type: "linear",
+
+                        title: {
+                            display: true,
+                            text: "log10 of upper bound B_T4(q)",
+                            color: "#8b949e"
+                        },
+
+                        grid: {
+                            color: "#30363d"
+                        },
+
+                        ticks: {
+                            color: "#c9d1d9",
+                            callback: (value) => `10^${Number(value).toFixed(0)}`
+                        }
+                    }
+                }
+            },
+
+            plugins: [markerPlugin]
+        });
+    }
+
+    function updateDashboard() {
+        const m = Number.parseInt(
+            document.getElementById("m").value,
+            10
+        );
+
+        const hMin = Number.parseFloat(
+            document.getElementById("h_min").value
+        );
+
+        const etaExponent = Number.parseInt(
+            document.getElementById("eta_exp").value,
+            10
+        );
+
+        const showBft = document
+            .getElementById("show_bft")
+            .checked;
+
+        if (
+            !Number.isInteger(m) ||
+            m <= 0 ||
+            !Number.isFinite(hMin) ||
+            hMin < 0 ||
+            !Number.isInteger(etaExponent) ||
+            etaExponent <= 0
+        ) {
+            throw new Error("Invalid dashboard parameter state.");
+        }
+
+        const eta = Math.pow(10, -etaExponent);
+        const logEta = -etaExponent;
+
+        // Worst-case saturation of p_inf <= 2^(-h_min).
+        const pInf = Math.pow(2, -hMin);
+
+        const qSamples = [];
+        const curveData = [];
+        const targetData = [];
+
+        const sampleCount = 500;
+
+        for (let i = 0; i <= sampleCount; i++) {
+            const q = i / sampleCount;
+            const logBound = log10UpperBound(q, pInf, m);
+
+            qSamples.push(q);
+            curveData.push({
+                x: q,
+                y: logBound
+            });
+
+            targetData.push({
+                x: q,
+                y: logEta
+            });
+        }
+
+        const qMaxResult = calculateQMax(
+            pInf,
+            m,
+            eta
+        );
+
+        markerState = {
+            qMax: qMaxResult.qMax,
+            showBft
+        };
+
+        document.getElementById("m_val").textContent =
+            m.toLocaleString();
+
+        document.getElementById("h_min_val").textContent =
+            hMin.toFixed(1);
+
+        document.getElementById("eta_exp_val").textContent =
+            `η = 1e-${etaExponent}`;
+
+        document.getElementById("metric_p_inf").textContent =
+            pInf.toFixed(8);
+
+        document.getElementById("metric_q0").textContent =
+            formatBoundFromLog10(
+                log10UpperBound(0, pInf, m)
+            );
+
+        document.getElementById("metric_q33").textContent =
+            formatBoundFromLog10(
+                log10UpperBound(0.33, pInf, m)
+            );
+
+        document.getElementById("metric_eta").textContent =
+            `1e-${etaExponent}`;
+
+        document.getElementById("metric_q1").textContent =
+            "1";
+
+        document.getElementById("metric_qmax").textContent =
+            qMaxResult.status === "feasible"
+                ? qMaxResult.qMax.toFixed(6)
+                : "No feasible q";
+
+        const alert = document.getElementById("security_alert");
+
+        if (pInf >= 1 - 1e-15) {
+            alert.style.display = "block";
+            alert.textContent =
+                "Residual non-inferability assumption collapsed: h_min = 0, " +
+                "therefore p_inf = p_comp = 1 and no finite m reduces the upper bound.";
+        } else if (qMaxResult.status !== "feasible") {
+            alert.style.display = "block";
+            alert.textContent =
+                "Selected design target is not achievable even at q = 0. " +
+                "Increase m, increase h_min, or relax η.";
+        } else {
+            alert.style.display = "none";
+            alert.textContent = "";
+        }
+
+        const minimumCurveLog = Math.min(
+            ...curveData.map(point => point.y)
+        );
+
+        const yMinimum = Math.floor(
+            Math.min(
+                minimumCurveLog,
+                logEta
+            ) * 1.05
+        );
+
+        boundChart.options.scales.y.min = Math.min(-1, yMinimum);
+        boundChart.options.scales.y.max = 0;
+
+        boundChart.data.datasets[0].data = curveData;
+        boundChart.data.datasets[1].data = targetData;
+
+        boundChart.update();
+    }
+
+    document
+        .querySelectorAll('input[type="range"], input[type="checkbox"]')
+        .forEach((input) => {
+            input.addEventListener("input", updateDashboard);
+            input.addEventListener("change", updateDashboard);
+        });
+
+    initializeChart();
+    updateDashboard();
+</script>
+</body>
+</html>

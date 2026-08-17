@@ -1,0 +1,84 @@
+import Mathlib
+
+namespace CNVSEntropicInference
+
+/--
+Modello entropico CNVS.
+
+`KAdv` = conoscenza accessibile all'avversario.
+`ν` = funzione di inferenza.
+`pInf` = probabilità/indice di inferenza.
+-/
+structure EntropicInferenceModel where
+  KAdv : ℝ
+  ν : ℝ → ℝ
+
+  hKAdv_nonneg : 0 ≤ KAdv
+
+  hν_nonneg_on_nonneg :
+    ∀ x, 0 ≤ x → 0 ≤ ν x
+
+  hν_monotone :
+    Monotone ν
+
+/--
+Probabilità/indice di inferenza associato alla conoscenza avversaria.
+-/
+noncomputable def pInf
+    (M : EntropicInferenceModel) : ℝ :=
+  M.ν M.KAdv
+
+/--
+La probabilità/indice di inferenza è non negativa
+quando la conoscenza avversaria è non negativa.
+-/
+theorem pInf_nonnegative
+    (M : EntropicInferenceModel) :
+    0 ≤ pInf M := by
+  unfold pInf
+  exact M.hν_nonneg_on_nonneg M.KAdv M.hKAdv_nonneg
+
+/--
+Se la conoscenza avversaria cresce,
+la probabilità/indice di inferenza non diminuisce.
+-/
+theorem inference_monotone_in_knowledge
+    (M : EntropicInferenceModel)
+    (K1 K2 : ℝ)
+    (hK : K1 ≤ K2) :
+    M.ν K1 ≤ M.ν K2 := by
+  exact M.hν_monotone hK
+
+/--
+Esempio concreto:
+ν(x) = x.
+-/
+noncomputable def ExampleEntropicModel :
+    EntropicInferenceModel where
+  KAdv := 3
+  ν := fun x => x
+
+  hKAdv_nonneg := by norm_num
+
+  hν_nonneg_on_nonneg := by
+    intro x hx
+    exact hx
+
+  hν_monotone := by
+    intro a b hab
+    exact hab
+
+example :
+    pInf ExampleEntropicModel = 3 := by
+  rfl
+
+example :
+    0 ≤ pInf ExampleEntropicModel := by
+  exact pInf_nonnegative ExampleEntropicModel
+
+example :
+    ExampleEntropicModel.ν 2 ≤ ExampleEntropicModel.ν 5 := by
+  apply inference_monotone_in_knowledge ExampleEntropicModel
+  norm_num
+
+end CNVSEntropicInference

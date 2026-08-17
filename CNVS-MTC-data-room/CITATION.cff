@@ -1,0 +1,45 @@
+cff-version: 1.2.0
+message: "If you use this repository or the CNVS MTC Technical Report, please cite it as below."
+title: "CNVS MTC Data Room: Monte Carlo Test Suite and Executable Evaluation Environment for Closed Native Verification Systems"
+type: software
+authors:
+  - family-names: "Comitato"
+    given-names: "Massimo"
+year: 2026
+version: "1.0.0"
+date-released: "2026-07-08"
+abstract: >-
+  The CNVS MTC Data Room contains the Monte Carlo Test Suite, executable
+  evaluation environments, interactive dashboards, engineering-hardening tests,
+  figures, reports, and provenance material for the Closed Native Verification
+  Systems (CNVS) framework. The suite provides numerical, projective,
+  interactive, empirical, and executable support under explicit CNVS assumptions.
+  It does not replace the formal proof of the CNVS theory and does not establish
+  unconditional security.
+keywords:
+  - CNVS
+  - Closed Native Verification Systems
+  - Monte Carlo simulation
+  - Global Veto
+  - distributed verification
+  - hidden invariant binding
+  - finite-field validation
+  - protocol engineering
+  - adversarial reconstruction
+  - stochastic testing
+license: "LicenseRef-DOCS-CC-BY-NC-4.0-and-CODE-PolyForm-Noncommercial-1.0.0"
+repository-code: "https://github.com/"
+url: "https://github.com/"
+preferred-citation:
+  type: report
+  title: "MTC Technical Report: Stochastic and Empirical Evaluation of the CNVS Framework"
+  authors:
+    - family-names: "Comitato"
+      given-names: "Massimo"
+  year: 2026
+  institution:
+    name: "CNVS / Golden Protocol Nexus"
+  notes: >-
+    Supplementary repository: CNVS MTC Data Room. Documentation is released
+    under CC BY-NC 4.0. Code is released under PolyForm Noncommercial 1.0.0
+    unless otherwise specified.
