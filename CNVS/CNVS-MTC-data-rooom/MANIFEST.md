@@ -6,7 +6,7 @@ Author: **Massimo Comitato** Date: **2026-07-08** Repository: **cnvs-mtc-data-ro
 
 ---
 
-## Current Main Artifact
+## Current Main Artifacts
 
 ```text
 Report_Monte_Carlo_ENG.pdf
@@ -38,6 +38,36 @@ CURRENT
 
 ---
 
+```text
+ing_mtc_report_eng_v2.pdf
+```
+
+Description:
+
+```text
+CNVS Framework: Engineering-Hardened Execution Report (Tests 13-15)
+```
+
+SHA-256:
+
+```text
+7fe0638102d812d9873a0db47f7a584c433ca636505c08a599f1a2e2fe28ca00
+```
+
+Size:
+
+```text
+5384262 bytes
+```
+
+Status:
+
+```text
+CURRENT
+```
+
+---
+
 ## Repository Root Files
 
 | File | Purpose | Status |
@@ -50,6 +80,15 @@ CURRENT
 | `MANIFEST.md` | Artifact inventory and provenance index | Current |
 | `ENGINEERING_LIMITATIONS.md` | Model Limitations | Current |
 | `CITATION.cff` | Citation metadata | Current |
+
+---
+
+## Current Reports
+
+| File | Folder | Status | Notes |
+|---|---|---|---|
+| `Report_Monte_Carlo_ENG.pdf` | `reports/` | Current | Final MTC Technical Report |
+| `ing_mtc_report_eng_v2.pdf` | `reports/` | Current | Engineering-Hardened Execution Report (Tests 13-15) |
 
 ---
 
@@ -185,12 +224,14 @@ Command:
 
 ```bash
 sha256sum reports/Report_Monte_Carlo_ENG.pdf
+sha256sum reports/ing_mtc_report_eng_v2.pdf
 ```
 
 For Windows PowerShell:
 
 ```powershell
 Get-FileHash .\reports\Report_Monte_Carlo_ENG.pdf -Algorithm SHA256
+Get-FileHash .\reports\ing_mtc_report_eng_v2.pdf -Algorithm SHA256
 ```
 
 ---
