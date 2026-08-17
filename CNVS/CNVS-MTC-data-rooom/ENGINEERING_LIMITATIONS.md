@@ -16,7 +16,7 @@ Accordingly, the cryptographic parameters and random generators used in Tests 1�
 
 ### Tests 13–15: Protocol-Engineering Layer
 
-Tests 13–15 introduce a substantially more demanding engineering layer and should not be described by the same limitations as the earlier projective suite.
+Tests 13–15 introduce a substantially more demanding engineering layer.
 
 **Test 13** executes the fragmentation-sensitivity model in a 256-bit prime finite field corresponding to the secp256k1 field modulus:
 
