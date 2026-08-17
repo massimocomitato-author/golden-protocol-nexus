@@ -2,17 +2,14 @@
 
 # CNVS MTC Data Room Manifest
 
-Author: **Massimo Comitato**  
-Date: **2026-07-08**  
-Repository: **cnvs-mtc-data-room**  
-Project: **Closed Native Verification Systems — Monte Carlo Test Suite**
+Author: **Massimo Comitato** Date: **2026-07-08** Repository: **cnvs-mtc-data-room** Project: **Closed Native Verification Systems — Monte Carlo Test Suite**
 
 ---
 
 ## Current Main Artifact
 
 ```text
-reports/Report_Monte_Carlo_ENG.pdf
+Report_Monte_Carlo_ENG.pdf
 ```
 
 Description:
@@ -56,57 +53,45 @@ CURRENT
 
 ---
 
-## Current Report
-
-| File | Folder | Status | Notes |
-|---|---|---|---|
-| `Report_Monte_Carlo_ENG.pdf` | `reports/` | Current | Final MTC Technical Report |
-
----
-
 ## Current Python Test Files
 
-| Test | Filename | Status |
-|---|---|---|
-| Test 1 | `test_01_statistical_projection_min_entropy.py` | Current |
-| Test 2 | `test_02_dynamic_entropy_erosion.py` | Current |
-| Test 3 | `test_03_slashing_expected_value.py` | Current |
-| Test 4 | `test_04_topological_refresh_sybil_purge.py` | Current |
-| Test 5 | `test_05_mmin_design_formula.py` | Current |
-| Test 9 | `test_09_structural_poc.py` | Current |
-| Test 10 | `test_10_full_structural_semantic_model.py` | Current |
-| Test 11 | `test_11_fragmentation_sensitivity.py` | Current |
-| Test 12 | `test_12_engineering_hardened_256bit_fragmentation.py` | Current |
-| Test 13 | `test_13_engineering_hardened_256bit_full_strs.py` | Current |
-| Test 14 | `test_14_semantic_end_to_end_cnvs_full_pipeline.py` | Current |
-| Test 15 | `test_15_cnvs_m_sensitivity_full_pipeline.py` | Current |
+| Test | Filename | Folder | Status |
+|---|---|---|---|
+| Test 1 | `test_01_statistical_projection_min_entropy.py` | `python/projective_tests/` | Current |
+| Test 2 | `test_02_dynamic_entropy_erosion.py` | `python/projective_tests/` | Current |
+| Test 3 | `test_03_slashing_expected_value.py` | `python/projective_tests/` | Current |
+| Test 4 | `test_04_topological_refresh_sybil_purge.py` | `python/projective_tests/` | Current |
+| Test 5 | `test_05_mmin_design_formula.py` | `python/projective_tests/` | Current |
+| Test 9 | `test_09_structural_poc.py` | `python/empirical_tests/` | Current |
+| Test 10 | `test_10_full_structural_semantic_model.py` | `python/empirical_tests/` | Current |
+| Test 11 | `test_11_fragmentation_sensitivity.py` | `python/empirical_tests/` | Current |
+| Test 12 | `test_12_entropy_calibrated_topology_invariant_leakage.py` | `python/empirical_tests/` | Current |
+| Test 13 | `test_13_engineering_hardened_256bit_fragmentation` | `python/protocol_engineering_tests/` | Current |
+| Test 14 | `test_14_semantic_end_to_end_cnvs_full_pipeline.py` | `python/protocol_engineering_tests/` | Current |
+| Test 15 | `test_15_cnvs_m_sensitivity_full_pipeline.py` | `python/protocol_engineering_tests/` | Current |
 
 ---
 
 ## Current HTML / JavaScript Dashboards
 
-| Test | Filename | Status |
-|---|---|---|
-| Test 6 | `test_06_expected_value_dashboard.html` | Current |
-| Test 7 | `test_07_reconstruction_decay_dashboard.html` | Current |
-| Test 8 | `test_08_dynamic_entropy_erosion_dashboard.html` | Current |
+| Test | Filename | Folder | Status |
+|---|---|---|---|
+| Test 6 | `test_06_expected_value_dashboard.html` | `html-js/interactive_tests/` | Current |
+| Test 7 | `test_07_reconstruction_decay_dashboard.html` | `html-js/interactive_tests/` | Current |
+| Test 8 | `test_08_dynamic_entropy_erosion_dashboard.html` | `html-js/interactive_tests/` | Current |
 
 ---
 
 ## Figures
 
-Outcomes are stored under:
+Outcomes and figures are structurally mapped inside their respective test domains:
 
 ```text
-outcomes_tests/test_01/
-outcomes_tests/test_02/
-outcomes_tests/test_03/
-outcomes_tests/test_04/
-outcomes_tests/test_05/
-outcomes_tests/test_10/
-outcomes_tests/test_11/
-outcomes_tests/test_12/
-outcomes_tests/test_13/
+python/empirical_tests/figures/
+python/projective_tests/figures/
+python/protocol_engineering_tests/test_13_figures/
+python/protocol_engineering_tests/test_14_full_pipeline_outputs/figures/
+python/protocol_engineering_tests/test_15_m_sensitivity_outputs/figures/
 ```
 
 Output formats:
@@ -121,11 +106,15 @@ Output formats:
 
 ## Outputs
 
-Raw logs and numerical outputs are stored under:
+Raw logs, metadata, CSV summaries and JSON results are stored under:
 
 ```text
-outputs/logs/
-outputs/raw_results/
+python/empirical_tests/log/
+python/empirical_tests/test_12_entropy_outputs/
+python/projective_tests/log/
+python/protocol_engineering_tests/test_13_outputs/
+python/protocol_engineering_tests/test_14_full_pipeline_outputs/
+python/protocol_engineering_tests/test_15_m_sensitivity_outputs/
 ```
 
 File types:
@@ -158,14 +147,12 @@ Contents:
 
 ## Archive Policy
 
-Deprecated, obsolete, tautological, exploratory, or superseded materials are archived in the dedicated repository directories:
+Deprecated, obsolete, exploratory, or superseded materials are archived in the dedicated repository directories:
 
 ```text
 archive/deprecated_tests/
 archive/old_reports/
-archive/exploratory_versions/
 ```
-
 
 ```text
 These files are preserved only for historical and provenance purposes.
