@@ -78,6 +78,8 @@ CURRENT
 | Test 11 | `test_11_fragmentation_sensitivity.py` | Current |
 | Test 12 | `test_12_engineering_hardened_256bit_fragmentation.py` | Current |
 | Test 13 | `test_13_engineering_hardened_256bit_full_strs.py` | Current |
+| Test 14 | `test_14_semantic_end_to_end_cnvs_full_pipeline.py` | Current |
+| Test 15 | `test_15_cnvs_m_sensitivity_full_pipeline.py` | Current |
 
 ---
 
