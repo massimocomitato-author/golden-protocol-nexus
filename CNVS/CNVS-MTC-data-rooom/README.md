@@ -2,8 +2,7 @@
 
 **CNVS MTC Data Room** contains the Monte Carlo Test Suite, executable evaluation environments, figures, reports, and provenance material for the **Closed Native Verification Systems (CNVS)** framework.
 
-Author: **Massimo Comitato**  
-Repository scope: **MTC Technical Report, Monte Carlo simulations, executable structural tests, interactive dashboards, figures, outputs, and provenance records.**
+Author: **Massimo Comitato** Repository scope: **MTC Technical Report, Monte Carlo simulations, executable structural tests, interactive dashboards, figures, outputs, and provenance records.**
 
 ---
 
@@ -21,7 +20,7 @@ The MTC suite is designed to evaluate the operational behavior of CNVS under exp
 - Global Veto;
 - executable separation between local admissibility and global validity.
 
-  The suite also includes a dedicated repository of engineerable prototypes (.../python/CNVS Engineering Hardening Tests/).
+  The suite also includes a dedicated repository of engineerable prototypes in the `python/protocol_engineering_tests/` directory.
 
 The tests do **not** replace the formal proof of the CNVS theory and do **not** establish unconditional security. They provide numerical, projective, and executable support under the stated CNVS assumptions.
 
@@ -41,46 +40,41 @@ cnvs-mtc-data-room/
 ├── ENGINEERING_LIMITATIONS.md
 │
 ├── reports/
-│   └── Report_Monte_Carlo_ENG.pdf
+│   ├── Report_Monte_Carlo_ENG.pdf
+│   └── ing_mtc_report_eng_v2.pdf
 │
-├── python/projective_tests/
-│   ├── test_01_statistical_projection_min_entropy.py
-│   ├── test_02_dynamic_entropy_erosion.py
-│   ├── test_03_slashing_expected_value.py
-│   ├── test_04_topological_refresh_sybil_purge.py
-│   ├── test_05_mmin_design_formula.py
+├── python/
+│   ├── projective_tests/
+│   │   ├── test_01_statistical_projection_min_entropy.py
+│   │   ├── test_02_dynamic_entropy_erosion.py
+│   │   ├── test_03_slashing_expected_value.py
+│   │   ├── test_04_topological_refresh_sybil_purge.py
+│   │   ├── test_05_mmin_design_formula.py
+│   │   ├── figures/
+│   │   └── log/
+│   │
+│   ├── empirical_tests/
+│   │   ├── test_09_structural_poc.py
+│   │   ├── test_10_full_structural_semantic_model.py
+│   │   ├── test_11_fragmentation_sensitivity.py
+│   │   ├── test_12_entropy_calibrated_topology_invariant_leakage.py
+│   │   ├── figures/
+│   │   ├── log/
+│   │   └── test_12_entropy_outputs/
+│   │
+│   └── protocol_engineering_tests/
+│       ├── test_13_engineering_hardened_256bit_fragmentation.py
+│       ├── test_14_semantic_end_to_end_cnvs_full_pipeline.py
+│       ├── test_15_cnvs_m_sensitivity_full_pipeline.py
+│       ├── test_13_figures/
+│       ├── test_13_outputs/
+│       ├── test_14_full_pipeline_outputs/
+│       └── test_15_m_sensitivity_outputs/
 │
-├── python/empirical_tests/
-│   ├── test_09_structural_poc.py
-│   ├── test_10_full_structural_semantic_model.py
-│   ├── test_11_fragmentation_sensitivity.py
-│   └── test_12_entropy_calibrated_topology_invariant_leakage.py
-│
-├── python/protocol_engineering_tests/
-│   ├── test_13_engineering_hardened_256bit_fragmentation.py
-│   ├── test_14_semantic_end_to_end_cnvs_full_pipeline.py
-│   └── test_15_cnvs_m_sensitivity_full_pipeline.py
-│   
-│   
 ├── html-js/interactive_tests/
 │   ├── test_06_expected_value_dashboard.html
 │   ├── test_07_reconstruction_decay_dashboard.html
 │   └── test_08_dynamic_entropy_erosion_dashboard.html
-│
-├── outcomes_tests/
-│   ├── test_01/
-│   ├── test_02/
-│   ├── test_03/
-│   ├── test_04/
-│   ├── test_05/
-│   ├── test_10/
-│   ├── test_11/
-│   ├── test_12/
-│   └── test_13/
-│
-├── outputs/
-│   ├── logs/
-│   └── raw_results/
 │
 ├── provenance/
 │   ├── timestamp_manifest.md
@@ -89,13 +83,12 @@ cnvs-mtc-data-room/
 │
 └── archive/
     ├── deprecated_tests/
-    ├── old_reports/
-    └── exploratory_versions/
+    └── old_reports/
 ```
 
 ---
 
-## Current Main Report
+## Current Main Reports
 
 ```text
 reports/Report_Monte_Carlo_ENG.pdf
@@ -108,6 +101,17 @@ SHA256: f39f29ef36b744aba43e619ab826496402d6e480ef2e6b15e8d1c045ce14957f
 Size: 1627197 bytes
 ```
 
+```text
+reports/ing_mtc_report_eng_v2.pdf
+```
+
+SHA-256 entry:
+
+```text
+SHA256: 7fe0638102d812d9873a0db47f7a584c433ca636505c08a599f1a2e2fe28ca00
+Size: 5384262 bytes
+```
+
 ---
 
 ## Test Categories
@@ -115,7 +119,7 @@ Size: 1627197 bytes
 1. **Statistical Projection Tests** — Monte Carlo engines that simulate network behavior assuming the formal validity of the CNVS equations.
 2. **Interactive Statistical Projection Tests** — HTML/JS dashboards for real-time exploration of risk surfaces.
 3. **Minimum Critical Fragmentation Test** — design-formula stress test for the minimum critical fragmentation threshold `m_min`.
-4. **Executable Demonstrative Tests** — structural execution environments testing `V_L`, `Cons_R`, `Inv_C`, `V_G`, hidden invariant binding, topological refresh, and fragmentation sensitivity.
+4. **Executable Demonstrative & Engineering Tests** — structural execution environments testing `V_L`, `Cons_R`, `Inv_C`, `V_G`, hidden invariant binding, topological refresh, fragmentation sensitivity, and full-pipeline end-to-end limits.
 
 ---
 
@@ -159,16 +163,14 @@ Commercial use is not authorized without prior written permission from the autho
 
 ## Citation
 
-Please cite this repository and the MTC Technical Report as:
+Please cite this repository and the associated Technical Reports as:
 
 ```text
 Comitato, M. (2026). CNVS MTC Data Room: Monte Carlo Test Suite and Executable Evaluation Environment for Closed Native Verification Systems. Version 3.0.
 ```
 
-
 ---
 
 ## Author
 
-**Massimo Comitato**  
-Copyright © 2026, Massimo Comitato.
+**Massimo Comitato** Copyright © 2026, Massimo Comitato.
