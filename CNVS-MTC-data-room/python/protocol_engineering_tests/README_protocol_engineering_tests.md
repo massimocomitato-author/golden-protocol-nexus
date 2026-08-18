@@ -1,6 +1,6 @@
 # Protocol Engineering Tests
 
-This folder contains the **engineering-hardening tests** for the CNVS protocol.
+This folder contains the **engineering-hardening tests (Tests 13, 14, and 15)** for the CNVS protocol.
 
 These tests are separate from the academic MTC suite.
 
@@ -32,6 +32,7 @@ They are designed to address engineering limitations identified during red-team-
 |---|---|---|
 | Test 13 | Engineering-Hardened 256-bit Fragmentation Sensitivity Test under Hidden Invariant Binding | `test_13_engineering_hardened_256bit_fragmentation.py` |
 | Test 14 | Full-Pipeline Semantic Execution and Progressive Invariant Validation | `test_14_semantic_end_to_end_cnvs_full_pipeline.py` |
+| Test 15 | Direct m-Sensitivity of Security and Computational Scaling | `test_15_cnvs_m_sensitivity_full_pipeline.py` |
 
 ---
 
@@ -154,7 +155,7 @@ The difference `k - m` represents the topological camouflage layer that surround
 
 ---
 
-## 4. Engineering Meaning inside Test 13 and Test 14
+## 4. Engineering Meaning inside Tests 13, 14, and 15
 
 In the engineering tests, this behavior is represented by parameterizing the total active verifiers (`Q` or `k`) independently from the critical set (`m`):
 
@@ -190,30 +191,16 @@ They should be read as engineering-hardening artifacts, not as enterprise-ready 
 
 ## Output Structure
 
-    protocol_engineering_tests/
-    ├── README_protocol_engineering_tests.md
-    ├── test_13_engineering_hardened_256bit_fragmentation.py
-    ├── test_14_semantic_end_to_end_cnvs_full_pipeline.py
-    ├── outputs/
-    │   ├── logs/
-    │   └── raw_results/
-    └── outcome_tests/
-        ├── test_13/
-        └── test_14/
-
----
-
-## Licensing
-
-Documentation and explanatory materials are governed by `LICENSE-DOCS.md`.
-
-Python source files are governed by `LICENSE-CODE.md`.
-
-Commercial use requires prior written authorization from the author.
-
----
-
-## Author
-
-Massimo Comitato  
-Copyright © 2026.
+```text
+protocol_engineering_tests/
+├── README_protocol_engineering_tests.md
+├── Readme_test_13.md
+├── Readme_test_14.md
+├── Readme_test_15.md
+├── test_13_engineering_hardened_256bit_fragmentation.py
+├── test_14_semantic_end_to_end_cnvs_full_pipeline.py
+├── test_15_cnvs_m_sensitivity_full_pipeline.py
+├── test_13_figures/
+├── test_13_outputs/
+├── test_14_full_pipeline_outputs/
+└── test_15_m_sensitivity_outputs/
