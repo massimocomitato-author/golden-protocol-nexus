@@ -1,2 +1,0 @@
-iterations,seed_replicates,early_rejection_rate,selector_changed_rate,stale_replay_accept_rate,injective_reassignment_rate,object_audits,object_early_rejection_rate,object_recovery_rate,object_stale_replay_accept_rate,full_shadow_audits,full_shadow_recovery_rate,branch_refresh_mean_ns,full_refresh_mean_ns
-10000,10,1.0,1.0,0.0,1.0,1000,1.0,1.0,0.0,100,1.0,3309548.0,4853295.0

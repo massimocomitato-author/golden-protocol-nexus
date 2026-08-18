@@ -1,7 +1,0 @@
-leakage_fraction,leaked_rows,total_rows,nullspace_dimension,iterations,seed_replicates,local_pass_rate,cons_pass_rate,feasible_false_state_rate,false_state_bypass_rate,semantic_or_hidden_veto_rate,mean_semantic_distortion,exact_reconstruction_attempts,exact_reconstruction_accept_rate,object_audits,object_vector_agreement_rate
-0.0,0,512,512,500000,10,1.0,1.0,1.0,0.0,1.0,0.0026297684031104636,0,0.0,1000,1.0
-0.1,51,512,461,500000,10,1.0,1.0,1.0,0.0,1.0,0.0027566578876937376,0,0.0,1000,1.0
-0.25,128,512,384,500000,10,1.0,1.0,1.0,0.0,1.0,0.0025759664358024352,0,0.0,1000,1.0
-0.5,256,512,256,500000,10,1.0,1.0,1.0,0.0,1.0,0.002505597471049518,0,0.0,1000,1.0
-0.75,384,512,128,500000,10,1.0,1.0,1.0,0.0,1.0,0.004374583034654047,0,0.0,1000,1.0
-1.0,512,512,0,500000,10,1.0,1.0,0.0,0.0,0.0,0.0,500000,1.0,1000,1.0
