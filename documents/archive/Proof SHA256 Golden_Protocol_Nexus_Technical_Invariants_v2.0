@@ -1,0 +1,24 @@
+Golden Protocol Nexus — Proof of Existence
+
+Document:
+Golden_Protocol_Nexus_Technical_Invariants_v2.0.pdf
+
+SHA256:
+86F27CE7C11ABD132715F57CED6FCA1482F6280CA33193CA1691D7495E97238A
+
+Bitcoin Timestamp:
+Anchored via OpenTimestamps
+
+Block Height:
+947150
+
+Timestamp Date (approx):
+2026-04-29
+
+Verification:
+This hash can be independently verified against the Bitcoin blockchain
+using OpenTimestamps.
+
+Files:
+- Original document (PDF)
+- Corresponding .ots proof file
