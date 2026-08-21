@@ -91,7 +91,7 @@ cnvs-mtc-data-room/
 ## Current Main Reports
 
 ```text
-reports/Report_Monte_Carlo_ENG.pdf
+reports/academic_report_mc_test.pdf
 ```
 
 SHA-256 entry:
