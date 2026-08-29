@@ -41,7 +41,7 @@ cnvs-mtc-data-room/
 │
 ├── reports/
 │   ├── academic_report_mc_test.pdf
-│   └── ing_mtc_report_eng_v2.pdf
+│   └── ing_mtc_report_eng_v3.pdf
 │
 ├── python/
 │   ├── projective_tests/
@@ -102,14 +102,14 @@ Size: 1627197 bytes
 ```
 
 ```text
-reports/ing_mtc_report_eng_v2.pdf
+reports/ing_mtc_report_eng_v3.pdf
 ```
 
 SHA-256 entry:
 
 ```text
-SHA256: 7fe0638102d812d9873a0db47f7a584c433ca636505c08a599f1a2e2fe28ca00
-Size: 5384262 bytes
+SHA256: a0774f61f37f75a787704d0297f1bcdfa85611948252e58c8d7ab9d11fb6d91f
+Size: 5390336  bytes
 ```
 
 ---
