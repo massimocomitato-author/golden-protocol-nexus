@@ -40,9 +40,9 @@ Golden Protocol Nexus replaces this model:
 
 ## Documents
 
-- 📄 [Founder Paper](https://github.com/massimocomitato-author/golden-protocol-nexus/documents/Golden_Protocol_Nexus_v6.3_Architectural_Framework.pdf)
-- 📄 [Concise Paper](https://github.com/massimocomitato-author/golden-protocol-nexus/whitepapers/Golden_Protocol_Nexus_Conciser_Paper.pdf)
-- 📄 [Ultra Summary](https://github.com/massimocomitato-author/golden-protocol-whitepapers/Golden_Protocol_Nexus_Ultra_Summary.pdf)
+- 📄 [Founder Paper](https://github.com/massimocomitato-author/golden-protocol-nexus/blob/main/documents/Golden_Protocol_Nexus_v6.3_Architectural_Framework.pdf)
+- 📄 [Concise Paper](https://github.com/massimocomitato-author/golden-protocol-nexus/blob/main/whitepapers/Golden_Protocol_Nexus_Conciser_Paper.pdf)
+- 📄 [Ultra Summary](https://github.com/massimocomitato-author/golden-protocol-nexus/blob/main/whitepapers/Golden_Protocol_Nexus_Ultra_Summary.pdf)
 
 ---
 
@@ -55,7 +55,6 @@ Golden_Protocol_Nexus_v6.3_Architectural_Framework.pdf 1.8 MB
   
 **Bitcoin Timestamp:**  
 Anchored via OpenTimestamps  
-Block: 946810  
 Date: 2026-04-27 (CET)
 ---
 
