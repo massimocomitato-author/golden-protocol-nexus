@@ -50,7 +50,7 @@ Golden Protocol Nexus replaces this model:
 
 **SHA256 (Founder Paper):**  
 Golden_Protocol_Nexus_v6.3_Architectural_Framework.pdf 1.8 MB
-`8b18d441509fc6ab90de35be6dd1b8c85a8cb7354aa05541ec264cd1a841347a`
+`21b8298b21be3e526aabc878c98b989c76ffdbf9976d69fb41ab88f28a0da610`
 
   
 **Bitcoin Timestamp:**  
