@@ -40,17 +40,17 @@ Golden Protocol Nexus replaces this model:
 
 ## Documents
 
-- 📄 [Founder Paper](https://github.com/massimocomitato-author/golden-protocol-nexus/blob/main/Golden_Protocol_Nexus_Founder_Paper_v4.0_GENESIS.pdf)
-- 📄 [Concise Paper](https://github.com/massimocomitato-author/golden-protocol-nexus/blob/main/Golden_Protocol_Nexus_Conciser_Paper.pdf)
-- 📄 [Ultra Summary](https://github.com/massimocomitato-author/golden-protocol-nexus/blob/main/Golden_Protocol_Nexus_Ultra_Summary.pdf)
+- 📄 [Founder Paper](https://github.com/massimocomitato-author/golden-protocol-nexus/documents/Golden_Protocol_Nexus_v6.3_Architectural_Framework.pdf)
+- 📄 [Concise Paper](https://github.com/massimocomitato-author/golden-protocol-nexus/whitepapers/Golden_Protocol_Nexus_Conciser_Paper.pdf)
+- 📄 [Ultra Summary](https://github.com/massimocomitato-author/golden-protocol-whitepapers/Golden_Protocol_Nexus_Ultra_Summary.pdf)
 
 ---
 
 ## Cryptographic Proof
 
 **SHA256 (Founder Paper):**  
-Golden_Protocol_Nexus_Founder_Paper_v4.0_GENESIS.pdf 1.4 MB
-`45713e85f35da310017e5434b90d702bad2b2b22bc398e96888861c89fc46c32`
+Golden_Protocol_Nexus_v6.3_Architectural_Framework.pdf 1.8 MB
+`8b18d441509fc6ab90de35be6dd1b8c85a8cb7354aa05541ec264cd1a841347a`
 
   
 **Bitcoin Timestamp:**  
